@@ -117,7 +117,47 @@ function Invoke-SqlQuery {
     }
 }
 
+function Send-WebhookMessage {
+    param(
+        $Message,
+        $Username,
+        $Envelope = @{
+            # type    = 4
+            content = $message
+        },
+        $Uri
+    )
 
+    if ($username) {
+        $envelope.username = $username
+    }
+    $cooked = $envelope | ConvertTo-Json -Compress
+    if ($ENV:ENV_DEBUG -eq 1) {
+        $invokeRestMethod_splat.Uri | Write-Host
+        "cooked: $cooked" | Write-Host
+    }
+
+    if ($uri -as [uri] | Where-Object Scheme -EQ 'https') {}
+    else {
+        Write-Warning "No valid https uri in $uri. Skipping webhook."
+        return
+    }
+
+    $invokeRestMethod_splat = @{
+        Uri               = $uri
+        Method            = "Post"
+        ContentType       = "application/json"
+        Body              = $cooked
+        MaximumRetryCount = 5
+        RetryIntervalSec  = 1
+    }
+    try { Invoke-RestMethod @invokeRestMethod_splat | Out-Null }
+    catch {
+        "failed" | Write-Host
+        $invokeRestMethod_splat | ConvertTo-Json -Depth 3 -Compress
+        $_
+    }
+}
 
 
 function Set-SqlRow {
@@ -224,42 +264,23 @@ function Invoke-RequestProcessing {
     ) -join "_"
     Write-Host $commandName
 
-    $invokeRestMethod_splat = @{
-        Uri               = "https://discord.com/api/v8/webhooks/{0}/{1}/messages/@original" -f $body.application_id, $body.token
-        Method            = "Patch"
-        ContentType       = "application/json"
-        Body              = (@{
-                type    = 4
-                content = 'HELLO!'
-            } | ConvertTo-Json)
-        MaximumRetryCount = 0
-        RetryIntervalSec  = 1
-    }
-    try { Invoke-RestMethod @invokeRestMethod_splat | Out-Null }
-    catch {
-        "failed" | Write-Host
-        $invokeRestMethod_splat | ConvertTo-Json -Depth 3 -Compress
-        $_
-    }
-
     $body | ConvertTo-Json -Depth 10 -Compress | Write-Host
     switch ($commandName) {
         "Start_game" {
 
-            if ($existing = "Select EndTime from game where guildId = '{0}' and EndTime > (SYSDATETIME())" -f $body.guild_id | Invoke-SqlQuery) {
-                $endTime = [System.DateTimeOffset]$existing.EndTime
-                $response = @{
-                    type    = 4
-                    content = "You already have a game running with an end time <t:{0}:R> (at <t:{0}>)" -f $endtime.ToUnixTimeSeconds()
-                } | ConvertTo-Json
-                Update-Response -response $response
+            if ($existing = "Select top 1 * from game where guildId = '{0}' and EndTime > (SYSDATETIME())" -f $body.guild_id | Invoke-SqlQuery) {
+                # TODO: Be able to update the end time or webhook by running start_game during an existing game
+                $endTime = ([System.DateTimeOffset]$existing.EndTime).ToUnixTimeSeconds()
+                $message = "Your server already has a game running with an end time <t:{0}:R> (at <t:{0}>)" -f $endtime
+                Send-Response -Message $message
                 return
             }
             else {
-                $end = [System.DateTime]::Now.AddMinutes(.5).ToUniversalTime()
+                $end = [System.DateTime]::Now.AddHours(72).ToUniversalTime()
                 $data = @{
-                    EndTime = $end
-                    GuildId = $body.guild_id
+                    EndTime     = $end
+                    GuildId     = $body.guild_id
+                    InitiatorId = $body.member.user.id
                 }
 
                 if ($duration = ($body.Data.options | Where-Object name -EQ "game").options | Where-Object name -EQ 'end' | Select-Object -expand Value) {
@@ -269,12 +290,53 @@ function Invoke-RequestProcessing {
                     $data.StatusWebhook = $webhook
                 }
 
-                $exported = Export-SqlData -Data ([PSCustomObject]$data) -SqlTable Game -OutputColumns EndTime
-                $endTime = [System.DateTimeOffset]$exported.EndTime
-                $message = "You now have a game running that ends <t:{0}:R> (at <t:{0}>)" -f $endtime.ToUnixTimeSeconds()
-                Update-Response -Message $message
+                $existing = Export-SqlData -Data ([PSCustomObject]$data) -SqlTable Game -OutputColumns EndTime, StatusWebhook
+                $endTime = ([System.DateTimeOffset]$existing.EndTime).ToUnixTimeSeconds()
+                $message = "You now have a game running that ends <t:{0}:R> (at <t:{0}>)" -f $endtime
+                Send-Response -Message $message
+
+                $webhookMessage_params = @{
+                    Message  = "Let the circle of trust begin!"
+                    Username = "Game Maker"
+                    Uri      = $existing.StatusWebhook
+                }
+                Send-WebhookMessage @webhookMessage_params
+
                 return
             }
+        }
+        "End_game" {
+            if ($existing = "Select top 1 * from game where
+            guildId = '{0}'
+            and EndTime > (SYSDATETIME())
+            and InitiatorId = '$($body.member.user.id)'
+            " -f $body.guild_id | Invoke-SqlQuery) {
+                "Update Game set EndTime = (SYSDATETIME()) where guildId = '{0}' and EndTime > (SYSDATETIME())" -f $body.guild_id | Invoke-SqlQuery
+                $message = "Game ended"
+                Send-Response -Message $message
+
+                $webhookMessage_params = @{
+                    Message  = "The circle of trust comes to a close (prematurely)!"
+                    Username = "Game Maker"
+                    Uri      = $existing.StatusWebhook
+                }
+                Send-WebhookMessage @webhookMessage_params
+                return
+            }
+            elseif ($existing = "Select top 1 * from game where
+            guildId = '{0}'
+            and EndTime > (SYSDATETIME())
+            " -f $body.guild_id | Invoke-SqlQuery) {
+                $message = "You did not start the game. Please contact <@$($existing.InitiatorId)> and have them end the game."
+                Send-Response -Message $message
+
+            }
+            else {
+                $message = "There is no currently running game."
+                Send-Response -Message $message
+                return
+            }
+
         }
     }
 }
