@@ -1,0 +1,8 @@
+CREATE TABLE [dbo].[Game]
+(
+  [Id] INT NOT NULL PRIMARY KEY IDENTITY,
+  [Start] DATETIME2 DEFAULT (SYSDATETIME()),
+  [End] DATETIME2,
+  [StatusWebhook] VARCHAR(MAX)
+)
+
