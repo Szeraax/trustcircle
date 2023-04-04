@@ -65,62 +65,219 @@ function Assert-Signature {
 function Invoke-SqlQuery {
     [cmdletbinding(SupportsShouldProcess)]
     Param(
+        [Parameter(ValueFromPipeline)]
         $Query,
         $ConnectionTimeout = 30,
         $QueryTimeout = 4
     )
+    begin {
+        if (
+            $ENV:APP_DB_INSTANCE -and
+            $ENV:APP_DB_DATABASE -and
+            $ENV:APP_DB_USERNAME -and
+            $ENV:APP_DB_PASSWORD
+        ) {}
+        else { throw "No info!" }
 
-    if ($ENV:APP_DB_INSTANCE -and $ENV:APP_DB_DATABASE -and $ENV:APP_DB_USERNAME -and $ENV:APP_DB_PASSWORD) {}
-    else { throw "No info!" }
-
-    $splat = @{
-        ServerInstance    = $ENV:APP_DB_INSTANCE
-        Database          = $ENV:APP_DB_DATABASE
-        Credential        = (
-            New-Object PSCredential -ArgumentList $ENV:APP_DB_USERNAME,
+        $splat = @{
+            ServerInstance    = $ENV:APP_DB_INSTANCE
+            Database          = $ENV:APP_DB_DATABASE
+            Credential        = (
+                New-Object PSCredential -ArgumentList $ENV:APP_DB_USERNAME,
             (ConvertTo-SecureString -AsPlainText -Force $ENV:APP_DB_PASSWORD)
-        )
-        ConnectionTimeout = $ConnectionTimeout
-        QueryTimeout      = $QueryTimeout
+            )
+            ConnectionTimeout = $ConnectionTimeout
+            QueryTimeout      = $QueryTimeout
+        }
     }
 
-    if ($pscmdlet.ShouldProcess($splat.Database, $Query)) {
-        if ($ENV:ENV_DEBUG -eq "1") { $Query -replace "`r?`n\s*", " " | Write-Host }
+    process {
+        if ($pscmdlet.ShouldProcess($splat.Database, $Query)) {
+            if ($ENV:ENV_DEBUG -eq "1") { $Query -replace "`r?`n\s*", " " | Write-Host }
 
-        # not datatable row objects due to [System.DBNull]::Value behavior
-        if ($Query -match "^\s*SELECT") { $splat.Add("as", "PSObject") }
+            # not datatable row objects due to [System.DBNull]::Value behavior
+            if ($Query -match "^\s*SELECT") { $splat.Add("as", "PSObject") }
 
-        $Attempt = 0
-        $Completed = $false
-        do {
-            $Attempt++
-            try {
-                Invoke-Sqlcmd2 @splat -Query $Query -ErrorAction Stop
-                $Completed = $true
-            }
-            catch {
-                if ($Attempt -gt 3) {
-                    throw $_
+            $Attempt = 0
+            $Completed = $false
+            do {
+                $Attempt++
+                try {
+                    Invoke-Sqlcmd2 @splat -Query $Query -ErrorAction Stop
+                    $Completed = $true
                 }
-                else { Start-Sleep 3 }
-            }
-        } until ($Completed)
+                catch {
+                    if ($Attempt -gt 3) {
+                        throw $_
+                    }
+                    else { Start-Sleep 3 }
+                }
+            } until ($Completed)
+        }
     }
 }
 
-function Close-Response {
-    param(
-        $response,
-        [HttpStatusCode]$statusCode = "OK"
+
+
+
+function Set-SqlRow {
+    [cmdletbinding(SupportsShouldProcess)]
+    Param(
+        [Parameter(Mandatory)]
+        [hashtable]$Data,
+        [Parameter(Mandatory)]
+        $SqlTable,
+        [Parameter(Mandatory)]
+        $KeyField,
+        [Parameter(Mandatory)]
+        $KeyValue
     )
-    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = $statusCode
-            Body       = $response
-        })
-    return
+    begin {
+    }
+
+    process {
+        # If I decide to enable ValueByPipeline, collect results into a list and upload in end{}
+    }
+
+    end {
+        $Query = "UPDATE $SqlTable SET {0} WHERE $KeyField = '$KeyValue'" -f (($Data.GetEnumerator() | ForEach-Object { "$($_.Key) = $($_.Value)" }) -join ",")
+        Invoke-SettlementSql -Query $Query
+    }
 }
 
 
+function Export-SqlData {
+    <#
+    .SYNOPSIS
+    This function will convert powershell objects into SQL compatible data rows
+
+    .DESCRIPTION
+    It uses the properties of the 1st item to enforce all objects in the array have an equal number of fields.
+    It replaces an null properties with a DBNULL value (different from an empty string, of course!)
+
+    .PARAMETER Data
+    The array of objects to get written to the database
+
+    .PARAMETER SqlTable
+    The table in the database to get written to
+
+    .PARAMETER PageSize
+    How many objects to upload to the database at a time. Typically, 1000 is the max
+
+    .EXAMPLE
+    Export-SqlData ([PSCustomObject]@{a=2;b=$null;c=''},[PSCustomObject]@{a=3.14}) -WhatIf
+
+    What if: Performing the operation "INSERT INTO $SqlTable (a,b,c) VALUES ('2',null,''),
+    ('3.14',null,null)" on target "".
+    #>
+    [cmdletbinding(SupportsShouldProcess)]
+    Param(
+        [array]$Data,
+        [Parameter(Mandatory)]
+        $SqlTable,
+        $OutputColumns,
+        $PageSize = 900
+    )
+    begin {
+        $select = $Data[0].PSObject.Properties.Name
+        if ($PSBoundParameters.OutputColumns) {
+            $output = "OUTPUT "
+            $outputItems = $PSBoundParameters.OutputColumns | Where-Object { $_ } | ForEach-Object {
+                "INSERTED.$_"
+            }
+            $output += $outputItems -join ", "
+        }
+        else {
+            $output = ''
+        }
+    }
+
+    process {
+        # If I decide to enable ValueByPipeline, collect results into a list and upload in end{}
+    }
+
+    end {
+        for ($i = 0; $i -lt $Data.Count; $i += $PageSize) {
+            $Query = "INSERT INTO $SqlTable ({0}) $output VALUES ({1})" -f ($Data[0].PSObject.Properties.Name -join ","),
+            (($Data[$i..($i + $PageSize - 1)] | Select-Object $select | ForEach-Object {
+                        ($_.PSObject.Properties.Value | & { process {
+                            # nulls need converted to DBNULL, not empty strings
+                            if ($null -eq $_) { 'null' }
+                            else { "'{0}'" -f ($_ -replace "'", "''") }
+                        } }) -join "," # Join each property in a single object
+                }) -join "),`n(" ) # Join each object in a single page/call to db
+
+            Invoke-SqlQuery -Query $Query
+        }
+    }
+}
+
+function Invoke-RequestProcessing {
+    param(
+        $body
+    )
+
+    $commandName = @(
+        $body.data.name
+        $body.data.options | Where-Object type -EQ 1 | Select-Object -First 1 -expand name
+        $body.data.options.options | Where-Object type -EQ 1 | Select-Object -First 1 -expand name
+    ) -join "_"
+    Write-Host $commandName
+
+    $invokeRestMethod_splat = @{
+        Uri               = "https://discord.com/api/v8/webhooks/{0}/{1}/messages/@original" -f $body.application_id, $body.token
+        Method            = "Patch"
+        ContentType       = "application/json"
+        Body              = (@{
+                type    = 4
+                content = 'HELLO!'
+            } | ConvertTo-Json)
+        MaximumRetryCount = 0
+        RetryIntervalSec  = 1
+    }
+    try { Invoke-RestMethod @invokeRestMethod_splat | Out-Null }
+    catch {
+        "failed" | Write-Host
+        $invokeRestMethod_splat | ConvertTo-Json -Depth 3 -Compress
+        $_
+    }
+
+    $body | ConvertTo-Json -Depth 10 -Compress | Write-Host
+    switch ($commandName) {
+        "Start_game" {
+
+            if ($existing = "Select EndTime from game where guildId = '{0}' and EndTime > (SYSDATETIME())" -f $body.guild_id | Invoke-SqlQuery) {
+                $endTime = [System.DateTimeOffset]$existing.EndTime
+                $response = @{
+                    type    = 4
+                    content = "You already have a game running with an end time <t:{0}:R> (at <t:{0}>)" -f $endtime.ToUnixTimeSeconds()
+                } | ConvertTo-Json
+                Update-Response -response $response
+                return
+            }
+            else {
+                $end = [System.DateTime]::Now.AddMinutes(.5).ToUniversalTime()
+                $data = @{
+                    EndTime = $end
+                    GuildId = $body.guild_id
+                }
+
+                if ($duration = ($body.Data.options | Where-Object name -EQ "game").options | Where-Object name -EQ 'end' | Select-Object -expand Value) {
+                    $data.EndTime = [System.DateTime]::Now.AddHours($duration).ToUniversalTime()
+                }
+                if ($webhook = ($body.Data.options | Where-Object name -EQ "game").options | Where-Object name -EQ 'webhook' | Select-Object -expand Value) {
+                    $data.StatusWebhook = $webhook
+                }
+
+                $exported = Export-SqlData -Data ([PSCustomObject]$data) -SqlTable Game -OutputColumns EndTime
+                $endTime = [System.DateTimeOffset]$exported.EndTime
+                $message = "You now have a game running that ends <t:{0}:R> (at <t:{0}>)" -f $endtime.ToUnixTimeSeconds()
+                Update-Response -Message $message
+                return
+            }
+        }
+    }
+}
 
 # This code scrubs DBNulls.  Props to Dave Wyatt and fffnite
 # Open a MR for this updated code to go into Invoke-SqlCmd2 module.
