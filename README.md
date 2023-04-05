@@ -23,7 +23,7 @@ A Discord Circle of Trust bot
 * [√] Add interaction code paths to FunctionApp/entry/run.ps1 to run the function commands
 * [√] Add queue code path for longer duration commands
 * [X] Add timer command to prevent cold starts
+* [√] Prevent you from betraying a circle after joining it
 * [ ] Change your circle key
-* [ ] Prevent you from betraying a circle after joining it
 * [ ] Allow other discord guilds to join the game?
   * Requires bot to be in their guild. Cross guild talking won't work though.....

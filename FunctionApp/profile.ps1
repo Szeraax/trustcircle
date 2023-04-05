@@ -822,11 +822,20 @@ function Invoke-RequestProcessing {
                 label = $label
                 key   = $key
             }
+
             if ($matched) {
                 $actionCount = 0
                 foreach ($match in $matched) {
                     if ('Betrayed' -eq $match.Status) { Write-Host "Already betrayed" }
                     else {
+                        if ($body.member.user.id -in ($match.members -split ',')) {
+                            Write-Host "Already in"
+                            $message = "You have previously joined this circle and cannot betray it."
+                            if ($actionCount) { $message += " (But you did also betray a circle with label ``$label``)" }
+                            Send-Response -Message $message
+                            return
+                        }
+
                         try {
                             "Update Player set Status = 'Betrayed'
                         where Id = $($match.Id)" | Invoke-SqlQuery
