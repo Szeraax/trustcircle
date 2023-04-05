@@ -276,7 +276,7 @@ function Invoke-RequestProcessing {
 
     $body | ConvertTo-Json -Depth 10 -Compress | Write-Host
     switch ($commandName) {
-        "Start_game" {
+        "admin_start_game" {
 
             if ($existingGame) {
                 # TODO: Be able to update the end time or webhook by running start_game during an existing game
@@ -293,10 +293,26 @@ function Invoke-RequestProcessing {
                     InitiatorId = $body.member.user.id
                 }
 
-                if ($duration = ($body.Data.options | Where-Object name -EQ "game").options | Where-Object name -EQ 'end' | Select-Object -expand Value) {
+                if ($duration =
+                    $body.Data.options
+                    | Where-Object name -EQ "start"
+                    | Select-Object -expand options
+                    | Where-Object name -EQ "game"
+                    | Select-Object -expand options
+                    | Where-Object name -EQ 'end'
+                    | Select-Object -expand Value
+                ) {
                     $data.EndTime = [System.DateTime]::Now.AddHours($duration).ToUniversalTime()
                 }
-                if ($webhook = ($body.Data.options | Where-Object name -EQ "game").options | Where-Object name -EQ 'webhook' | Select-Object -expand Value) {
+                if ($webhook =
+                    $body.Data.options
+                    | Where-Object name -EQ "start"
+                    | Select-Object -expand options
+                    | Where-Object name -EQ "game"
+                    | Select-Object -expand options
+                    | Where-Object name -EQ 'webhook'
+                    | Select-Object -expand Value
+                ) {
                     $data.StatusWebhook = $webhook
                 }
 
@@ -315,7 +331,7 @@ function Invoke-RequestProcessing {
                 return
             }
         }
-        "End_game" {
+        "admin_end_game" {
             if ($existingGame = "Select top 1 * from game where
             guildId = '{0}'
             and EndTime > (SYSDATETIME())
@@ -678,13 +694,21 @@ function Invoke-RequestProcessing {
                     "teacher", "force", "education"
                 )
 
-                $label = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'label' | Select-Object -expand Value
+                $label = $body.Data.options
+                | Where-Object name -EQ "circle"
+                | Select-Object -expand options
+                | Where-Object name -EQ 'label'
+                | Select-Object -expand Value
                 if ([string]::IsNullOrWhiteSpace($label)) {
                     $verb = $verbs | Get-Random
                     $noun = $nouns | Get-Random
                     $label = "$verb $noun"
                 }
-                $key = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'key' | Select-Object -expand Value
+                $key = $body.Data.options
+                | Where-Object name -EQ "circle"
+                | Select-Object -expand options
+                | Where-Object name -EQ 'key'
+                | Select-Object -expand Value
                 if ([string]::IsNullOrWhiteSpace($key)) { $key = Get-Random }
 
                 $playerCircle = @{
@@ -711,8 +735,17 @@ function Invoke-RequestProcessing {
                 return
             }
 
-            $label = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'label' | Select-Object -expand Value
-            $key = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'key' | Select-Object -expand Value
+            $label = $body.Data.options
+            | Where-Object name -EQ "circle"
+            | Select-Object -expand options
+            | Where-Object name -EQ 'label'
+            | Select-Object -expand Value
+
+            $key = $body.Data.options
+            | Where-Object name -EQ "circle"
+            | Select-Object -expand options
+            | Where-Object name -EQ 'key'
+            | Select-Object -expand Value
 
             $matched = "Select * from player where
                 Game = '$($existingGame.Id)'
@@ -769,8 +802,17 @@ function Invoke-RequestProcessing {
                 return
             }
 
-            $label = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'label' | Select-Object -expand Value
-            $key = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'key' | Select-Object -expand Value
+            $label = $body.Data.options
+            | Where-Object name -EQ "circle"
+            | Select-Object -expand options
+            | Where-Object name -EQ 'label'
+            | Select-Object -expand Value
+
+            $key = $body.Data.options
+            | Where-Object name -EQ "circle"
+            | Select-Object -expand options
+            | Where-Object name -EQ 'key'
+            | Select-Object -expand Value
 
             $matched = "Select * from player where
                 Game = '$($existingGame.Id)'
