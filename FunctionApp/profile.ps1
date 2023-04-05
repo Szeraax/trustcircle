@@ -735,6 +735,12 @@ function Invoke-RequestProcessing {
                 return
             }
 
+            if ($target_result = "Select top 1 * from player where game = $($existingGame.Id) and UserId = '$($body.member.user.id)'" | Invoke-SqlQuery) {}
+            else {
+                Send-Response "You must create a circle before you can participate"
+                return
+            }
+
             $label = $body.Data.options
             | Where-Object name -EQ "circle"
             | Select-Object -expand options
@@ -759,7 +765,10 @@ function Invoke-RequestProcessing {
             if ($matched) {
                 $actionCount = 0
                 foreach ($match in $matched) {
-                    if ($body.member.user.id -in ($match.members -split ',')) { Write-Host "Already in" }
+                    if ($body.member.user.id -in ($match.members -split ',')) {
+                        Write-Host "Already in"
+                        continue
+                    }
                     else {
                         try {
                             "Update Player set count = $(1 + $match.count),members = '$($match.members),$($body.member.user.id)'
@@ -801,6 +810,12 @@ function Invoke-RequestProcessing {
                 Send-Response -Message $message
                 return
             }
+            if ($target_result = "Select top 1 * from player where game = $($existingGame.Id) and UserId = '$($body.member.user.id)'" | Invoke-SqlQuery) {}
+            else {
+                Send-Response "You must create a circle before you can participate"
+                return
+            }
+
 
             $label = $body.Data.options
             | Where-Object name -EQ "circle"
@@ -874,6 +889,30 @@ function Invoke-RequestProcessing {
             }
             else {
                 Send-Response -Message "No circle found with label ``$label`` and key ``$key`` to betray"
+                return
+            }
+        }
+
+        "score" {
+            if ($existingGame = "Select top 1 * from game where
+            guildId = '{0}'
+            order by EndTime desc
+            " -f $body.guild_id | Invoke-SqlQuery
+            ) {
+                Write-Host "Found existing game"
+            }
+
+            $target = $body.Data.options
+            | Where-Object name -EQ "target"
+            | Select-Object -expand Value
+
+            if ($target_result = "Select top 1 * from player where game = $($existingGame.Id) and UserId = '$target'" | Invoke-SqlQuery) {
+                $message = "<@$target> has joined $($target_result.JoinCount) circles and betrayed $($target_result.BetrayCount) circles."
+                Send-Response -Message $message
+                return
+            }
+            else {
+                Send-Response -Message "<@$target> has not begun playing yet"
                 return
             }
         }

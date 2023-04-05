@@ -8,5 +8,7 @@ CREATE TABLE [dbo].[Player] (
     [Members]   VARCHAR(MAX)  NULL,
     [Key]    VARCHAR (300) NULL,
     [Status] VARCHAR (50)  CONSTRAINT [DEFAULT_Player_Status] DEFAULT 'Intact' NULL,
+    [JoinCount]   INT  NULL,
+    [BetrayCount]   INT  NULL,
     CONSTRAINT [FK_Player_Game] FOREIGN KEY ([Game]) REFERENCES [dbo].[Game] ([Id]) ON DELETE CASCADE ON UPDATE CASCADE
 );
