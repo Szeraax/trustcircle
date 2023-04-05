@@ -74,7 +74,37 @@ if ($results) {
                 })
         }
         default {
-            $body = $results | ConvertTo-Html -PostContent "Note: The Discord Username is displayed if the game is already concluded."
+            $head = @"
+                <Title>Leaderboard</Title>
+                <style>
+                body { background-color:#E5E4E2;
+                    font-family:Monospace;
+                    font-size:10pt; }
+                td, th { border:0px solid black;
+                        border-collapse:collapse;
+                        white-space:pre; }
+                th { color:white;
+                    background-color:black; }
+                table, tr, td, th { padding: 2px; margin: 0px ;white-space:pre; }
+                tr:nth-child(odd) {background-color: lightgray}
+                table { margin-left:5px; margin-bottom:20px;}
+                h2 {
+                font-family:Tahoma;
+                color:#6D7B8D;
+                }
+                .alert {
+                color: red;
+                }
+                .footer
+                { color:green;
+                margin-left:10px;
+                font-family:Tahoma;
+                font-size:8pt;
+                font-style:italic;
+                }
+                </style>
+"@
+            $body = $results | ConvertTo-Html -Head $head -PostContent "Note: The Discord Username is displayed if the game is already concluded."
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode  = [HttpStatusCode]::OK
                     Body        = $body -join "`n"

@@ -349,7 +349,7 @@ function Invoke-RequestProcessing {
 
         }
 
-        "circle_create" {
+        "create_circle" {
             if (-not $existingGame) {
                 $message = 'No existing game found. Run `/start game` to begin a game.'
                 Send-Response -Message $message
@@ -567,13 +567,13 @@ function Invoke-RequestProcessing {
                     "teacher", "force", "education"
                 )
 
-                $label = ($body.Data.options | Where-Object name -EQ "create").options | Where-Object name -EQ 'label' | Select-Object -expand Value
+                $label = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'label' | Select-Object -expand Value
                 if ([string]::IsNullOrWhiteSpace($label)) {
                     $verb = $verbs | Get-Random
                     $noun = $nouns | Get-Random
                     $label = "$verb $noun"
                 }
-                $key = ($body.Data.options | Where-Object name -EQ "create").options | Where-Object name -EQ 'key' | Select-Object -expand Value
+                $key = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'key' | Select-Object -expand Value
                 if ([string]::IsNullOrWhiteSpace($key)) { $key = Get-Random }
 
                 $playerCircle = @{
@@ -593,15 +593,15 @@ function Invoke-RequestProcessing {
             }
         }
 
-        "circle_join" {
+        "join_circle" {
             if (-not $existingGame) {
                 $message = 'No existing game found. Run `/start game` to begin a game.'
                 Send-Response -Message $message
                 return
             }
 
-            $label = ($body.Data.options | Where-Object name -EQ "join").options | Where-Object name -EQ 'label' | Select-Object -expand Value
-            $key = ($body.Data.options | Where-Object name -EQ "join").options | Where-Object name -EQ 'key' | Select-Object -expand Value
+            $label = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'label' | Select-Object -expand Value
+            $key = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'key' | Select-Object -expand Value
 
             $matched = "Select * from player where
                 Game = '$($existingGame.Id)'
@@ -651,15 +651,15 @@ function Invoke-RequestProcessing {
             }
         }
 
-        "circle_betray" {
+        "betray_circle" {
             if (-not $existingGame) {
                 $message = 'No existing game found. Run `/start game` to begin a game.'
                 Send-Response -Message $message
                 return
             }
 
-            $label = ($body.Data.options | Where-Object name -EQ "betray").options | Where-Object name -EQ 'label' | Select-Object -expand Value
-            $key = ($body.Data.options | Where-Object name -EQ "betray").options | Where-Object name -EQ 'key' | Select-Object -expand Value
+            $label = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'label' | Select-Object -expand Value
+            $key = ($body.Data.options | Where-Object name -EQ "circle").options | Where-Object name -EQ 'key' | Select-Object -expand Value
 
             $matched = "Select * from player where
                 Game = '$($existingGame.Id)'
