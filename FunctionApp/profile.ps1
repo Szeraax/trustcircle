@@ -261,8 +261,8 @@ function Invoke-RequestProcessing {
 
     $commandName = @(
         $body.data.name
-        $body.data.options | Where-Object type -EQ 1 | Select-Object -First 1 -expand name
-        $body.data.options.options | Where-Object type -EQ 1 | Select-Object -First 1 -expand name
+        $body.data.options | Where-Object type -In 1, 2 | Select-Object -First 1 -expand name
+        $body.data.options.options | Where-Object type -In 1, 2 | Select-Object -First 1 -expand name
     ) -join "_"
     Write-Host $commandName
 
@@ -337,7 +337,7 @@ function Invoke-RequestProcessing {
             guildId = '{0}'
             and EndTime > (SYSDATETIME())
             " -f $body.guild_id | Invoke-SqlQuery) {
-                $message = "You did not start the game. Please contact <@$($existingGame.InitiatorId)> and have them end the game."
+                $message = "You did not start the game. Please contact <@$($existingGame.InitiatorId)> and have them perform this action."
                 Send-Response -Message $message
 
             }
@@ -347,6 +347,117 @@ function Invoke-RequestProcessing {
                 return
             }
 
+        }
+
+        "admin_change_circle" {
+            if ($existingGame = "Select top 1 * from game where
+            guildId = '{0}'
+            and EndTime > (SYSDATETIME())
+            and InitiatorId = '$($body.member.user.id)'
+            " -f $body.guild_id | Invoke-SqlQuery) {
+
+                $label = $body.Data.options
+                | Where-Object name -EQ "change"
+                | Select-Object -expand options
+                | Where-Object name -EQ "circle"
+                | Select-Object -expand options
+                | Where-Object name -EQ 'label'
+                | Select-Object -expand Value
+                if ([string]::IsNullOrWhiteSpace($label)) {
+                    $message = "No valid label text submitted"
+                    Send-Response -Message $message
+                    return
+                }
+                $new_label = $body.Data.options
+                | Where-Object name -EQ "change"
+                | Select-Object -expand options
+                | Where-Object name -EQ "circle"
+                | Select-Object -expand options
+                | Where-Object name -EQ 'new_label'
+                | Select-Object -expand Value
+                if ([string]::IsNullOrWhiteSpace($new_label)) {
+                    $message = "No valid new_label text submitted"
+                    Send-Response -Message $message
+                    return
+                }
+
+                "UPDATE player set Label = @new_label where game = $($existingGame.Id) and Label = @label" -f $body.guild_id | Invoke-SqlQuery -SqlParameters @{
+                    label     = $label
+                    new_label = $new_label
+                }
+
+                $message = "``$label`` circle updated to ``$new_label``"
+                Send-Response -Message $message
+
+                $webhookMessage_params = @{
+                    Message  = "A circle has been administratively changed to ``$new_label``!"
+                    Username = "Game Maker"
+                    Uri      = $existingGame.StatusWebhook
+                }
+                Send-WebhookMessage @webhookMessage_params
+                return
+            }
+            elseif ($existingGame = "Select top 1 * from game where
+            guildId = '{0}'
+            and EndTime > (SYSDATETIME())
+            " -f $body.guild_id | Invoke-SqlQuery) {
+                $message = "You did not start the game. Please contact <@$($existingGame.InitiatorId)> and have them perform this action."
+                Send-Response -Message $message
+            }
+            else {
+                $message = "There is no currently running game."
+                Send-Response -Message $message
+                return
+            }
+        }
+
+        "admin_delete_circle" {
+            if ($existingGame = "Select top 1 * from game where
+            guildId = '{0}'
+            and EndTime > (SYSDATETIME())
+            and InitiatorId = '$($body.member.user.id)'
+            " -f $body.guild_id | Invoke-SqlQuery) {
+
+                $label = $body.Data.options
+                | Where-Object name -EQ "delete"
+                | Select-Object -expand options
+                | Where-Object name -EQ "circle"
+                | Select-Object -expand options
+                | Where-Object name -EQ 'label'
+                | Select-Object -expand Value
+                if ([string]::IsNullOrWhiteSpace($label)) {
+                    $message = "No valid label text submitted"
+                    Send-Response -Message $message
+                    return
+                }
+
+                "delete from player where game = $($existingGame.Id) and Label = @label" -f $body.guild_id | Invoke-SqlQuery -SqlParameters @{
+                    label = $label
+                }
+
+                $message = "``$label`` circle deleted"
+                Send-Response -Message $message
+
+                $webhookMessage_params = @{
+                    Message  = "A circle was administratively deleted"
+                    Username = "Game Maker"
+                    Uri      = $existingGame.StatusWebhook
+                }
+                # Send-WebhookMessage @webhookMessage_params
+                return
+            }
+            elseif ($existingGame = "Select top 1 * from game where
+            guildId = '{0}'
+            and EndTime > (SYSDATETIME())
+            " -f $body.guild_id | Invoke-SqlQuery) {
+                $message = "You did not start the game. Please contact <@$($existingGame.InitiatorId)> and have them perform this action."
+                Send-Response -Message $message
+            }
+            else {
+                $message = "There is no currently running game."
+                Send-Response -Message $message
+                return
+            }
         }
 
         "create_circle" {
