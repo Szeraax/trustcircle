@@ -371,14 +371,214 @@ function Invoke-RequestProcessing {
                 return
             }
             else {
+                $verbs = @(
+                    "abiding", "accelerating", "accepting", "accomplishing", "achieving", "acquiring",
+                    "acceding", "activating", "adapting", "adding", "addressing", "administering",
+                    "admiring", "admitting", "adopting", "advising", "affording", "agreeing",
+                    "alerting", "alighting", "allowing", "altering", "amusing", "analyzing",
+                    "announcing", "annoying", "answering", "anticipating", "apologizing", "appearing",
+                    "applauding", "applauding", "appointing", "appraising", "appreciating", "approving",
+                    "arbitrating", "arguing", "arising", "arranging", "arresting", "arriving",
+                    "ascertaining", "asking", "assembling", "assessing", "assisting", "assuring",
+                    "attaching", "attacking", "attaining", "attempting", "attending", "attracting",
+                    "auditing", "avoiding", "awaking", "backing", "baking", "balancing",
+                    "banning", "banging", "barring", "bating", "bathing", "battling",
+                    "being", "beaming", "bearing", "beating", "becoming", "begging",
+                    "beginning", "behaving", "beholding", "belonging", "bending", "besetting",
+                    "betting", "biding", "binding", "biting", "bleaching", "bleeding",
+                    "blessing", "blinding", "blinking", "blotting", "blowing", "blushing",
+                    "boasting", "boiling", "bolting", "bombing", "booking", "boring",
+                    "borrowing", "bouncing", "bowing", "boxing", "braking", "branching",
+                    "breaking", "breathing", "breeding", "briefing", "bringing", "broadcasting",
+                    "bruising", "brushing", "bubbling", "budgeting", "building", "bumping",
+                    "burning", "bursting", "burying", "busting", "buying", "buzzing",
+                    "calculating", "calling", "camping", "caring", "carrying", "carving",
+                    "casting", "cataloging", "catching", "causing", "challenging", "changing",
+                    "charging", "charting", "chasing", "cheating", "checking", "cheering",
+                    "chewing", "choking", "choosing", "chopping", "claiming", "clapping",
+                    "clarifying", "classifying", "cleaning", "clearing", "clinging", "clipping",
+                    "closing", "clothing", "coaching", "coiling", "collecting", "coloring",
+                    "combing", "coming", "commanding", "communicating", "comparing", "competing",
+                    "compiling", "complaining", "completing", "composing", "computing", "conceiving",
+                    "concentrating", "conceptualizing", "concerning", "concluding", "conducting", "confessing",
+                    "confronting", "confusing", "connecting", "conserving", "considering", "consisting",
+                    "consolidating", "constructing", "consulting", "containing", "continuing", "contracting",
+                    "controlling", "converting", "coordinating", "copying", "correcting", "correlating",
+                    "costing", "coughing", "counseling", "counting", "covering", "cracking",
+                    "crashing", "crawling", "creating", "creeping", "critiquing", "crossing",
+                    "crushing", "crying", "curing", "curling", "curving", "cutting",
+                    "cycling", "damming", "damaging", "dancing", "daring", "dealing",
+                    "decaying", "deceiving", "deciding", "decorating", "defining", "delaying",
+                    "delegating", "delighting", "delivering", "demonstrating", "depending", "describing",
+                    "deserting", "deserving", "designing", "destroying", "detailing", "detecting",
+                    "determining", "developing", "devising", "diagnosing", "digging", "directing",
+                    "disagreeing", "disappearing", "disapproving", "disarming", "discovering", "disliking",
+                    "dispensing", "displaying", "disproving", "dissecting", "distributing", "diving",
+                    "diverting", "dividing", "doing", "doubling", "doubting", "drafting",
+                    "dragging", "draining", "dramatizing", "drawing", "dreaming", "dressing",
+                    "drinking", "dripping", "driving", "dropping", "drowning", "drumming",
+                    "drying", "dusting", "dwelling", "earning", "eating", "editing",
+                    "educating", "eliminating", "embarrassing", "employing", "emptying", "enacting",
+                    "encouraging", "ending", "enduring", "enforcing", "engineering", "enhancing",
+                    "enjoying", "enlisting", "ensuring", "entering", "entertaining", "escaping",
+                    "establishing", "estimating", "evaluating", "examining", "exceeding", "exciting",
+                    "excusing", "executing", "exercising", "exhibiting", "existing", "expanding",
+                    "expecting", "expediting", "experimenting", "explaining", "exploding", "expressing",
+                    "extending", "extracting", "facing", "facilitating", "fading", "failing",
+                    "fancying", "fastening", "faxing", "fearing", "feeding", "feeling",
+                    "fencing", "fetching", "fighting", "filling", "filling", "filming",
+                    "finalizing", "financing", "finding", "firing", "fitting", "fixing",
+                    "flapping", "flashing", "fleeing", "flinging", "floating", "flooding",
+                    "flowing", "flowering", "flying", "folding", "following", "fooling",
+                    "forbidding", "forcing", "forecasting", "foregoing", "foreseeing", "foretelling",
+                    "forgetting", "forgiving", "forming", "formulating", "forsaking", "framing",
+                    "freezing", "frightening", "frying", "gathering", "gazing", "generating",
+                    "getting", "giving", "glowing", "glueing", "going", "governing",
+                    "grabbing", "graduating", "grating", "greasing", "greeting", "grinning",
+                    "grinding", "griping", "groaning", "growing", "guaranteeing", "guarding",
+                    "guessing", "guiding", "hammering", "handing", "handling", "handwriting",
+                    "hanging", "happening", "harassing", "harming", "hating", "haunting",
+                    "heading", "healing", "heaping", "hearing", "heating", "helping",
+                    "hiding", "hitting", "holding", "hooking", "hoping", "hoping",
+                    "hovering", "hugging", "humming", "hunting", "hurrying", "hurting",
+                    "hypothesizing", "identifying", "ignoring", "illustrating", "imagining", "implementing",
+                    "impressing", "improving", "improvising", "including", "increasing", "inducing",
+                    "influencing", "informing", "initiating", "injecting", "injuring", "inlaying",
+                    "innovating", "inputing", "inspecting", "inspiring", "installing", "instituting",
+                    "instructing", "insuring", "integrating", "intending", "intensifying", "interesting",
+                    "interfering", "interlaying", "interpreting", "interrupting", "interviewing", "introducing",
+                    "inventing", "inventorying", "investigating", "inviting", "irritating", "itching",
+                    "jailing", "jamming", "jogging", "joining", "joking", "judging",
+                    "juggling", "jumping", "justifying", "keeping", "keeping", "kicking",
+                    "killing", "kissing", "kneeling", "knitting", "knocking", "knotting",
+                    "knowing", "labeling", "landing", "lasting", "laughing", "launching",
+                    "laying", "leading", "leaning", "leaping", "learning", "leaving",
+                    "lecturing", "lending", "letting", "leveling", "licensing", "licking",
+                    "lying", "lifting", "lighting", "lightening", "liking", "listing",
+                    "listening", "living", "loading", "locating", "locking", "logging",
+                    "longing", "looking", "losing", "loving", "maintaining", "making",
+                    "manning", "managing", "manipulating", "manufacturing", "mapping", "marching",
+                    "marking", "marketing", "marrying", "matching", "mating", "mattering",
+                    "meaning", "measuring", "meddling", "mediating", "meeting", "melting",
+                    "melting", "memorizing", "mending", "mentoring", "milking", "mining",
+                    "misleading", "missing", "misspelling", "mistaking", "misunderstanding", "mixing",
+                    "moaning", "modeling", "modifying", "monitoring", "mooring", "motivating",
+                    "mourning", "moving", "mowing", "muddling", "mugging", "multiplying",
+                    "murdering", "nailing", "naming", "navigating", "needing", "negotiating",
+                    "nesting", "nodding", "nominating", "normalizing", "noting", "noticing",
+                    "numbering", "obeying", "objecting", "observing", "obtaining", "occurring",
+                    "offending", "offering", "officiating", "opening", "operating", "ordering",
+                    "organizing", "orienteering", "originating", "overcoming", "overdoing", "overdrawing",
+                    "overflowing", "overhearing", "overtaking", "overthrowing", "owing", "owning",
+                    "packing", "paddling", "painting", "parking", "parting", "participating",
+                    "passing", "pasting", "patting", "pausing", "paying", "pecking",
+                    "pedaling", "peeling", "peeping", "perceiving", "perfecting", "performing",
+                    "permitting", "persuading", "phoning", "photographing", "picking", "piloting",
+                    "pinching", "pining", "pinpointing", "pioneering", "placing", "planing",
+                    "planting", "playing", "pleading", "pleasing", "plugging", "pointing",
+                    "poking", "polishing", "popping", "possessing", "posting", "pouring",
+                    "practicing", "praising", "praying", "preaching", "preceding", "predicting",
+                    "preferring", "preparing", "prescribing", "presenting", "preserving", "presetting",
+                    "presiding", "pressing", "pretending", "preventing", "pricking", "printing",
+                    "processing", "procuring", "producing", "professing", "programming", "progressing",
+                    "projecting", "promising", "promoting", "proofreading", "proposing", "protecting",
+                    "proving", "providing", "publicizing", "pulling", "pumping", "punching",
+                    "puncturing", "punishing", "purchasing", "pushing", "putting", "qualifying",
+                    "questioning", "queueing", "quitting", "racing", "radiating", "raining",
+                    "raising", "ranking", "rating", "reaching", "reading", "realigning",
+                    "realizing", "reasoning", "receiving", "recognizing", "recommending", "reconciling",
+                    "recording", "recruiting", "reducing", "referring", "reflecting", "refusing",
+                    "regretting", "regulating", "rehabilitating", "reigning", "reinforcing", "rejecting",
+                    "rejoicing", "relating", "relaxing", "releasing", "relying", "remaining",
+                    "remembering", "reminding", "removing", "rendering", "reorganizing", "repairing",
+                    "repeating", "replacing", "replying", "reporting", "representing", "reproducing",
+                    "requesting", "rescuing", "researching", "resolving", "responding", "restoring",
+                    "restructuring", "retiring", "retrieving", "returning", "reviewing", "revising",
+                    "rhyming", "riding", "riding", "ringing", "rinsing", "rising",
+                    "risking", "robing", "rocking", "rolling", "rotting", "rubbing",
+                    "ruining", "ruling", "running", "rushing", "sacking", "sailing",
+                    "satisfying", "saving", "sawing", "saying", "scaring", "scattering",
+                    "scheduling", "scolding", "scorching", "scraping", "scratching", "screaming",
+                    "screwing", "scribbling", "scrubbing", "sealing", "searching", "securing",
+                    "seeing", "seeking", "selecting", "selling", "sending", "sensing",
+                    "separating", "serving", "servicing", "setting", "settling", "sewing",
+                    "shading", "shaking", "shaping", "sharing", "shaving", "shearing",
+                    "shedding", "sheltering", "shining", "shivering", "shocking", "shoeing",
+                    "shooting", "shopping", "showing", "shrinking", "shrugging", "shutting",
+                    "sighing", "signing", "signaling", "simplifying", "sining", "singing",
+                    "sinking", "sipping", "siting", "sketching", "skiing", "skipping",
+                    "slapping", "slaying", "sleeping", "sliding", "slinging", "slinking",
+                    "slipping", "slitting", "slowing", "smashing", "smelling", "smiling",
+                    "smiting", "smoking", "snatching", "sneaking", "sneezing", "sniffing",
+                    "snoring", "snowing", "soaking", "solving", "soothing", "soothsaying",
+                    "sorting", "sounding", "sowing", "sparing", "sparking", "sparkling",
+                    "speaking", "specifying", "speeding", "spelling", "spending", "spilling",
+                    "spinning", "spiting", "splitting", "spoiling", "spotting", "spraying",
+                    "spreading", "springing", "sprouting", "squashing", "squeaking", "squealing",
+                    "squeezing", "staining", "stamping", "standing", "staring", "starting",
+                    "staying", "stealing", "steering", "stepping", "sticking", "stimulating",
+                    "stinging", "stinking", "stirring", "stitching", "stoping", "storing",
+                    "strapping", "streamlining", "strengthening", "stretching", "striding", "striking",
+                    "stringing", "striping", "striving", "stroking", "structuring", "studying",
+                    "stuffing", "subletting", "subtracting", "succeeding", "sucking", "suffering",
+                    "suggesting", "suiting", "summarizing", "supervising", "supplying", "supporting",
+                    "supposing", "surprising", "surrounding", "suspecting", "suspending", "swearing",
+                    "sweating", "sweeping", "swelling", "swimming", "swinging", "switching",
+                    "symbolizing", "synthesizing", "systemizing", "tabulating", "taking", "talking",
+                    "taming", "taping", "targeting", "tasting", "teaching", "tearing",
+                    "teasing", "telephoning", "telling", "tempting", "terrifying", "testing",
+                    "thanking", "thawing", "thinking", "thriving", "throwing", "thrusting",
+                    "ticking", "tickling", "tying", "timing", "tipping", "tiring",
+                    "touching", "touring", "towing", "tracing", "trading", "training",
+                    "transcribing", "transferring", "transforming", "translating", "transporting", "trapping",
+                    "traveling", "treading", "treating", "trembling", "tricking", "tripping",
+                    "trotting", "troubling", "troubleshooting", "trusting", "trying", "tugging",
+                    "tumbling", "turning", "tutoring", "twisting", "typing", "undergoing",
+                    "understanding", "undertaking", "undressing", "unfastening", "unifying", "uniting",
+                    "unlocking", "unpacking", "untidying", "updating", "upgrading", "upholding",
+                    "upsetting", "using", "utilizing", "vanishing", "verbalizing", "verifying",
+                    "vexing", "visiting", "wailing", "waiting", "waking", "walking",
+                    "wandering", "wanting", "warming", "warning", "washing", "wasting",
+                    "watching", "watering", "waving", "wearing", "weaving", "wedding",
+                    "weeping", "weighing", "welcoming", "wending", "wetting", "whining",
+                    "whipping", "whirling", "whispering", "whistling", "wining", "winding",
+                    "winking", "wiping", "wishing", "withdrawing", "withholding", "withstanding",
+                    "wobbling", "wondering", "working", "worrying", "wrapping", "wrecking",
+                    "wrestling", "wriggling", "wringing", "writing", "x-raying", "yawning",
+                    "yelling", "zipping", "zooming"
+                )
+                $nouns = @(
+                    "time", "year", "people", "way", "day", "man",
+                    "thing", "woman", "life", "child", "world", "school",
+                    "state", "family", "student", "group", "country", "problem",
+                    "hand", "part", "place", "case", "week", "company",
+                    "system", "program", "question", "work", "government", "number",
+                    "night", "point", "home", "water", "room", "mother",
+                    "area", "money", "story", "fact", "month", "right",
+                    "study", "book", "eye", "job", "word", "business",
+                    "issue", "side", "kind", "head", "house", "service",
+                    "friend", "father", "power", "hour", "game", "line",
+                    "end", "member", "law", "car", "city", "community",
+                    "name", "president", "team", "minute", "idea", "kid",
+                    "body", "information", "back", "parent", "face", "others",
+                    "level", "office", "door", "health", "person", "art",
+                    "war", "history", "party", "result", "change", "morning",
+                    "reason", "research", "girl", "guy", "moment", "air",
+                    "teacher", "force", "education"
+                )
+
                 $label = ($body.Data.options | Where-Object name -EQ "create").options | Where-Object name -EQ 'label' | Select-Object -expand Value
-                if ([string]::IsNullOrWhiteSpace($label)) { $label = $body.member.user.username }
+                if ([string]::IsNullOrWhiteSpace($label)) {
+                    $verb = $verbs | Get-Random
+                    $noun = $nouns | Get-Random
+                    $label = "$verb $noun"
+                }
                 $key = ($body.Data.options | Where-Object name -EQ "create").options | Where-Object name -EQ 'key' | Select-Object -expand Value
                 if ([string]::IsNullOrWhiteSpace($key)) { $key = Get-Random }
 
                 $playerCircle = @{
                     UserId   = $body.member.user.id
-                    Username = $body.member.user.username
+                    Username = $body.member.nick ? $body.member.nick : $body.member.user.username
                     Label    = $label
                     Key      = $key
                     Count    = 1
@@ -407,12 +607,13 @@ function Invoke-RequestProcessing {
                 Game = '$($existingGame.Id)'
                 AND [label] = @label
                 AND [Key] = @key
+                AND Status = 'Intact'
                 " | Invoke-SqlQuery -SqlParameters @{
                 label = $label
                 key   = $key
             }
             if ($matched) {
-                $addedCount = 0
+                $actionCount = 0
                 foreach ($match in $matched) {
                     if ($body.member.user.id -in ($match.members -split ',')) { Write-Host "Already in" }
                     else {
@@ -420,7 +621,7 @@ function Invoke-RequestProcessing {
                             "Update Player set count = $(1 + $match.count),members = '$($match.members),$($body.member.user.id)'
                         where Id = $($match.Id)" | Invoke-SqlQuery
                             Write-Host "Added $($body.member.user.id) to $($match.Id)"
-                            $addedCount++
+                            $actionCount++
                         }
                         catch {
                             Send-Response -Message "failed for some reason. Try again?"
@@ -428,26 +629,27 @@ function Invoke-RequestProcessing {
                         }
                     }
                 }
-                if ($addedCount -eq 1) {
-                    $message = "You have joined the circle with label ``$label`` and key ``$key`` (it now has $($match.count) members)."
+                if ($actionCount -eq 1) {
+                    $message = "You have joined the circle with label ``$label`` and key ``$key`` (it now has $(1 + $match.count) members)."
                     Send-Response -Message $message
                     return
                 }
-                elseif ($addedCount -eq 0) {
+                elseif ($actionCount -eq 0) {
                     $message = "You have already joined the circle with label ``$label`` and key ``$key`` (it has $($match.count) members)."
                     Send-Response -Message $message
                     return
                 }
-                elseif ($addedCount -gt 1) {
-                    $message = "You joined $addedCount circles with label ``$label`` and key ``$key``"
+                elseif ($actionCount -gt 1) {
+                    $message = "You joined $actionCount circles with label ``$label`` and key ``$key``"
                     Send-Response -Message $message
                     return
                 }
             }
             else {
-                Send-Response -Message "No circle found with label ``$label`` and key ``$key``"
+                Send-Response -Message "No intact circle found with label ``$label`` and key ``$key``"
                 return
             }
+        }
 
 
         }
