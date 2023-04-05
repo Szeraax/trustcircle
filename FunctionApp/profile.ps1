@@ -67,6 +67,7 @@ function Invoke-SqlQuery {
     Param(
         [Parameter(ValueFromPipeline)]
         $Query,
+        $SqlParameters,
         $ConnectionTimeout = 30,
         $QueryTimeout = 4
     )
@@ -89,6 +90,7 @@ function Invoke-SqlQuery {
             ConnectionTimeout = $ConnectionTimeout
             QueryTimeout      = $QueryTimeout
         }
+        if ($SqlParameters) { $splat.Add('SqlParameters', $SqlParameters) }
     }
 
     process {
