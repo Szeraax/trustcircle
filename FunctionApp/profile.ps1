@@ -225,7 +225,7 @@ function Export-SqlData {
         if ($PSBoundParameters.OutputColumns) {
             $output = "OUTPUT "
             $outputItems = $PSBoundParameters.OutputColumns | Where-Object { $_ } | ForEach-Object {
-                "INSERTED.$_"
+                "INSERTED.[$_]"
             }
             $output += $outputItems -join ", "
         }
@@ -240,7 +240,7 @@ function Export-SqlData {
 
     end {
         for ($i = 0; $i -lt $Data.Count; $i += $PageSize) {
-            $Query = "INSERT INTO $SqlTable ({0}) $output VALUES ({1})" -f ($Data[0].PSObject.Properties.Name -join ","),
+            $Query = "INSERT INTO $SqlTable ([{0}]) $output VALUES ({1})" -f ($Data[0].PSObject.Properties.Name -join "],["),
             (($Data[$i..($i + $PageSize - 1)] | Select-Object $select | ForEach-Object {
                         ($_.PSObject.Properties.Value | & { process {
                             # nulls need converted to DBNULL, not empty strings
@@ -266,13 +266,21 @@ function Invoke-RequestProcessing {
     ) -join "_"
     Write-Host $commandName
 
+    if ($existingGame = "Select top 1 * from game where
+            guildId = '{0}'
+            and EndTime > (SYSDATETIME())
+            " -f $body.guild_id | Invoke-SqlQuery
+    ) {
+        Write-Host "Found existing game"
+    }
+
     $body | ConvertTo-Json -Depth 10 -Compress | Write-Host
     switch ($commandName) {
         "Start_game" {
 
-            if ($existing = "Select top 1 * from game where guildId = '{0}' and EndTime > (SYSDATETIME())" -f $body.guild_id | Invoke-SqlQuery) {
+            if ($existingGame) {
                 # TODO: Be able to update the end time or webhook by running start_game during an existing game
-                $endTime = ([System.DateTimeOffset]$existing.EndTime).ToUnixTimeSeconds()
+                $endTime = ([System.DateTimeOffset]$existingGame.EndTime).ToUnixTimeSeconds()
                 $message = "Your server already has a game running with an end time <t:{0}:R> (at <t:{0}>)" -f $endtime
                 Send-Response -Message $message
                 return
@@ -292,15 +300,15 @@ function Invoke-RequestProcessing {
                     $data.StatusWebhook = $webhook
                 }
 
-                $existing = Export-SqlData -Data ([PSCustomObject]$data) -SqlTable Game -OutputColumns EndTime, StatusWebhook
-                $endTime = ([System.DateTimeOffset]$existing.EndTime).ToUnixTimeSeconds()
+                $existingGame = Export-SqlData -Data ([PSCustomObject]$data) -SqlTable Game -OutputColumns EndTime, StatusWebhook
+                $endTime = ([System.DateTimeOffset]$existingGame.EndTime).ToUnixTimeSeconds()
                 $message = "You now have a game running that ends <t:{0}:R> (at <t:{0}>)" -f $endtime
                 Send-Response -Message $message
 
                 $webhookMessage_params = @{
                     Message  = "Let the circle of trust begin!"
                     Username = "Game Maker"
-                    Uri      = $existing.StatusWebhook
+                    Uri      = $existingGame.StatusWebhook
                 }
                 Send-WebhookMessage @webhookMessage_params
 
@@ -308,7 +316,7 @@ function Invoke-RequestProcessing {
             }
         }
         "End_game" {
-            if ($existing = "Select top 1 * from game where
+            if ($existingGame = "Select top 1 * from game where
             guildId = '{0}'
             and EndTime > (SYSDATETIME())
             and InitiatorId = '$($body.member.user.id)'
@@ -320,16 +328,16 @@ function Invoke-RequestProcessing {
                 $webhookMessage_params = @{
                     Message  = "The circle of trust comes to a close (prematurely)!"
                     Username = "Game Maker"
-                    Uri      = $existing.StatusWebhook
+                    Uri      = $existingGame.StatusWebhook
                 }
                 Send-WebhookMessage @webhookMessage_params
                 return
             }
-            elseif ($existing = "Select top 1 * from game where
+            elseif ($existingGame = "Select top 1 * from game where
             guildId = '{0}'
             and EndTime > (SYSDATETIME())
             " -f $body.guild_id | Invoke-SqlQuery) {
-                $message = "You did not start the game. Please contact <@$($existing.InitiatorId)> and have them end the game."
+                $message = "You did not start the game. Please contact <@$($existingGame.InitiatorId)> and have them end the game."
                 Send-Response -Message $message
 
             }
@@ -339,6 +347,46 @@ function Invoke-RequestProcessing {
                 return
             }
 
+        }
+
+        "circle_create" {
+            if (-not $existingGame) {
+                $message = 'No existing game found. Run `/start game` to begin a game.'
+                Send-Response -Message $message
+                return
+            }
+            $circle = "select p.* from Player p where p.game = '$($existingGame.Id)'" |
+            Invoke-SqlQuery -SqlParameters @{guild = $guild }
+
+            if ($circle) {
+                $message = 'You have already created a circle. Its label is `{0}` and has key `{1}` (it currently has {2} {3}).' -f @(
+                    $circle.Label
+                    $circle.Key
+                    $circle.Count
+                    $circle.Count -gt 1 ? "members":"member"
+                )
+                Send-Response -Message $message
+                return
+            }
+            else {
+                $label = ($body.Data.options | Where-Object name -EQ "create").options | Where-Object name -EQ 'label' | Select-Object -expand Value
+                if ([string]::IsNullOrWhiteSpace($label)) { $label = $body.member.user.username }
+                $key = ($body.Data.options | Where-Object name -EQ "create").options | Where-Object name -EQ 'key' | Select-Object -expand Value
+                if ([string]::IsNullOrWhiteSpace($key)) { $key = Get-Random }
+                $playerCircle = @{
+                    UserId  = $body.member.user.id
+                    Label   = $label
+                    Key     = $key
+                    Count   = 1
+                    Members = $body.member.user.id
+                    Game    = $existingGame.Id
+                }
+
+                $circle = Export-SqlData -Data ([PSCustomObject]$playerCircle) -SqlTable Player -OutputColumns Label, Key
+                $message = 'You created a circle labeled `{0}` with key `{1}`.' -f $circle.Label, $circle.Key
+                Send-Response -Message $message
+                return
+            }
         }
     }
 }

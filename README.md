@@ -4,8 +4,8 @@ A Discord Circle of Trust bot
 ## Roadmap
 
 * Add commands to the discord side of the bot
-  * start game, circle action, report status
-  * Start game: Duration in hours, webhook URI
+  * start game/stop game, circle action, report status, admin change circle name/delete circle
+  * Start game: Duration in hours, webhook URI (only 1 active game per server at a time)
     * Webhook URI will report on:
     * Circle getting betrayed
     * Circle overtaking another circle

@@ -1,9 +1,11 @@
 CREATE TABLE [dbo].[Player] (
-    [Id]     INT           NOT NULL PRIMARY KEY CLUSTERED ([Id] ASC),
+    [Id]     INT           NOT NULL IDENTITY PRIMARY KEY  CLUSTERED ([Id] ASC),
     [Game]   INT           NULL,
-    [Guild]  VARCHAR (50)  NULL,
     [UserId] VARCHAR (50)  NULL,
-    [Name]   VARCHAR (50)  NULL,
+    [Label]   VARCHAR (50)  NULL,
+    [Count]   INT  NULL,
+    [Members]   VARCHAR(MAX)  NULL,
     [Key]    VARCHAR (300) NULL,
+    [Status] VARCHAR (50)  CONSTRAINT [DEFAULT_Player_Status] DEFAULT 'Intact' NULL,
     CONSTRAINT [FK_Player_Game] FOREIGN KEY ([Game]) REFERENCES [dbo].[Game] ([Id]) ON DELETE CASCADE ON UPDATE CASCADE
 );
