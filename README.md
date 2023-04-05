@@ -4,15 +4,16 @@ A Discord Circle of Trust bot
 ## Roadmap
 
 * Add commands to the discord side of the bot
-  * [ ] Main commands
+  * [√] Main commands
     * [√] start game
     * [√] stop game
     * [√] circle actions
     * [√] report status
-    * [ ] admin change circle name
-    * [ ] admin delete circle
+    * [√] admin change circle name
+    * [√] admin delete circle
   * [√] Start game: Duration in hours, webhook URI (only 1 active game per server at a time)
-    * [ ] Circle getting betrayed
+    * [ ] Circle milestones (every 25? appsetting?)
+    * [√] Circle getting betrayed
     * [ ] Circle overtaking another circle
     * [√] End of game
     * [ ] Final results leaderboard
@@ -23,5 +24,6 @@ A Discord Circle of Trust bot
 * [√] Add queue code path for longer duration commands
 * [X] Add timer command to prevent cold starts
 * [ ] Change your circle key
+* [ ] Prevent you from betraying a circle after joining it
 * [ ] Allow other discord guilds to join the game?
   * Requires bot to be in their guild. Cross guild talking won't work though.....

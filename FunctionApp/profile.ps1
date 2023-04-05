@@ -839,6 +839,14 @@ function Invoke-RequestProcessing {
                         }
                     }
                 }
+                if ($actionCount) {
+                    $webhookMessage_params = @{
+                        Message  = "A circle with label ``$label`` was betrayed!"
+                        Username = "Game Breaker"
+                        Uri      = $existingGame.StatusWebhook
+                    }
+                    Send-WebhookMessage @webhookMessage_params
+                }
                 if ($actionCount -eq 1) {
                     $message = "You have betrayed the circle with label ``$label`` and key ``$key`` (it had $($match.count) {0})." -f ($match.Count -gt 1 ? "members":"member")
                     Send-Response -Message $message
