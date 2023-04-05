@@ -12,28 +12,52 @@ try {
 catch { $top = 10 }
 
 
-if ($guild = $request.query.guild) { }
+if ($guild = $request.query.guild) { $gameFilter = "guildId = @guild" }
+elseif ($gameId = $request.query.game) { $gameFilter = "Id = @gameId" }
 else {
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
-            Body       = "No guild specified"
+            Body       = "No guild or game specified"
         })
+    return
 }
 
-if ($label = $request.query.label) { $label = "%$label%" }
-else { $label = "%" }
+$game = "select top 1 * from game WHERE $gameFilter
+order by EndTime desc
+" | Invoke-SqlQuery -SqlParameters @{
+    guild  = $guild
+    gameID = $gameId
+}
 
-$results = "select top $top p.label,p.count from Player p join game g on p.game = g.id where
-g.guildId = @guild
-and p.label like @label
-and g.EndTime > (SYSDATETIME())
+if (-not $game) {
+    $message = "No games found for guild ``$guild``"
+    Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+            StatusCode = [HttpStatusCode]::NoContent
+            Body       = $message
+        })
+    return
+}
+
+
+if ($label = $request.query.label) {
+    $label = "%$label%"
+    $labelFilter = 'and label like @label'
+}
+
+$results = "select top $top * from Player where
+Game = $($game.Id)
+$labelFilter
 order by count desc
 " | Invoke-SqlQuery -SqlParameters @{
-    guild = $guild
     label = $label
 }
 
 if ($results) {
+    $results = $results | Select-Object Username, Label, Count, Status, Game
+    if ([datetime]::UtcNow -lt $game.EndTime) {
+        $results = $results | Select-Object * -ExcludeProperty Username
+    }
+
     switch ($Request.Query.Format) {
         "json" {
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
@@ -50,7 +74,7 @@ if ($results) {
                 })
         }
         default {
-            $body = $results | ConvertTo-Html
+            $body = $results | ConvertTo-Html -PostContent "Note: The Discord Username is displayed if the game is already concluded."
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode  = [HttpStatusCode]::OK
                     Body        = $body -join "`n"

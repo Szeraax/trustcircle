@@ -355,8 +355,10 @@ function Invoke-RequestProcessing {
                 Send-Response -Message $message
                 return
             }
-            $circle = "select p.* from Player p where p.game = '$($existingGame.Id)'" |
-            Invoke-SqlQuery -SqlParameters @{guild = $guild }
+            $circle = "select top 1 * from Player where
+            Game = '$($existingGame.Id)'
+            AND UserId = '$($body.member.user.id)'
+            " | Invoke-SqlQuery
 
             if ($circle) {
                 $message = 'You have already created a circle. Its label is `{0}` and has key `{1}` (it currently has {2} {3}).' -f @(
@@ -373,13 +375,15 @@ function Invoke-RequestProcessing {
                 if ([string]::IsNullOrWhiteSpace($label)) { $label = $body.member.user.username }
                 $key = ($body.Data.options | Where-Object name -EQ "create").options | Where-Object name -EQ 'key' | Select-Object -expand Value
                 if ([string]::IsNullOrWhiteSpace($key)) { $key = Get-Random }
+
                 $playerCircle = @{
-                    UserId  = $body.member.user.id
-                    Label   = $label
-                    Key     = $key
-                    Count   = 1
-                    Members = $body.member.user.id
-                    Game    = $existingGame.Id
+                    UserId   = $body.member.user.id
+                    Username = $body.member.user.username
+                    Label    = $label
+                    Key      = $key
+                    Count    = 1
+                    Members  = $body.member.user.id
+                    Game     = $existingGame.Id
                 }
 
                 $circle = Export-SqlData -Data ([PSCustomObject]$playerCircle) -SqlTable Player -OutputColumns Label, Key
@@ -387,6 +391,65 @@ function Invoke-RequestProcessing {
                 Send-Response -Message $message
                 return
             }
+        }
+
+        "circle_join" {
+            if (-not $existingGame) {
+                $message = 'No existing game found. Run `/start game` to begin a game.'
+                Send-Response -Message $message
+                return
+            }
+
+            $label = ($body.Data.options | Where-Object name -EQ "join").options | Where-Object name -EQ 'label' | Select-Object -expand Value
+            $key = ($body.Data.options | Where-Object name -EQ "join").options | Where-Object name -EQ 'key' | Select-Object -expand Value
+
+            $matched = "Select * from player where
+                Game = '$($existingGame.Id)'
+                AND [label] = @label
+                AND [Key] = @key
+                " | Invoke-SqlQuery -SqlParameters @{
+                label = $label
+                key   = $key
+            }
+            if ($matched) {
+                $addedCount = 0
+                foreach ($match in $matched) {
+                    if ($body.member.user.id -in ($match.members -split ',')) { Write-Host "Already in" }
+                    else {
+                        try {
+                            "Update Player set count = $(1 + $match.count),members = '$($match.members),$($body.member.user.id)'
+                        where Id = $($match.Id)" | Invoke-SqlQuery
+                            Write-Host "Added $($body.member.user.id) to $($match.Id)"
+                            $addedCount++
+                        }
+                        catch {
+                            Send-Response -Message "failed for some reason. Try again?"
+                            return
+                        }
+                    }
+                }
+                if ($addedCount -eq 1) {
+                    $message = "You have joined the circle with label ``$label`` and key ``$key`` (it now has $($match.count) members)."
+                    Send-Response -Message $message
+                    return
+                }
+                elseif ($addedCount -eq 0) {
+                    $message = "You have already joined the circle with label ``$label`` and key ``$key`` (it has $($match.count) members)."
+                    Send-Response -Message $message
+                    return
+                }
+                elseif ($addedCount -gt 1) {
+                    $message = "You joined $addedCount circles with label ``$label`` and key ``$key``"
+                    Send-Response -Message $message
+                    return
+                }
+            }
+            else {
+                Send-Response -Message "No circle found with label ``$label`` and key ``$key``"
+                return
+            }
+
+
         }
     }
 }
