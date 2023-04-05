@@ -651,7 +651,61 @@ function Invoke-RequestProcessing {
             }
         }
 
+        "circle_betray" {
+            if (-not $existingGame) {
+                $message = 'No existing game found. Run `/start game` to begin a game.'
+                Send-Response -Message $message
+                return
+            }
 
+            $label = ($body.Data.options | Where-Object name -EQ "betray").options | Where-Object name -EQ 'label' | Select-Object -expand Value
+            $key = ($body.Data.options | Where-Object name -EQ "betray").options | Where-Object name -EQ 'key' | Select-Object -expand Value
+
+            $matched = "Select * from player where
+                Game = '$($existingGame.Id)'
+                AND [label] = @label
+                AND [Key] = @key
+                " | Invoke-SqlQuery -SqlParameters @{
+                label = $label
+                key   = $key
+            }
+            if ($matched) {
+                $actionCount = 0
+                foreach ($match in $matched) {
+                    if ('Betrayed' -eq $match.Status) { Write-Host "Already betrayed" }
+                    else {
+                        try {
+                            "Update Player set Status = 'Betrayed'
+                        where Id = $($match.Id)" | Invoke-SqlQuery
+                            Write-Host "$($body.member.user.id) betrayed $($match.Id)"
+                            $actionCount++
+                        }
+                        catch {
+                            Send-Response -Message "failed for some reason. Try again?"
+                            return
+                        }
+                    }
+                }
+                if ($actionCount -eq 1) {
+                    $message = "You have betrayed the circle with label ``$label`` and key ``$key`` (it had $($match.count) {0})." -f ($match.Count -gt 1 ? "members":"member")
+                    Send-Response -Message $message
+                    return
+                }
+                elseif ($actionCount -eq 0) {
+                    $message = "You have already betrayed the circle with label ``$label`` and key ``$key`` (it had $($match.count) {0})." -f ($match.Count -gt 1 ? "members":"member")
+                    Send-Response -Message $message
+                    return
+                }
+                elseif ($actionCount -gt 1) {
+                    $message = "You betrayed $actionCount circles with label ``$label`` and key ``$key``! Devious!"
+                    Send-Response -Message $message
+                    return
+                }
+            }
+            else {
+                Send-Response -Message "No circle found with label ``$label`` and key ``$key`` to betray"
+                return
+            }
         }
     }
 }
