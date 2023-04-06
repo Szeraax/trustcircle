@@ -269,6 +269,7 @@ function Invoke-RequestProcessing {
     if ($existingGame = "Select top 1 * from game where
             guildId = '{0}'
             and EndTime > (SYSDATETIME())
+            order by EndTime desc
             " -f $body.guild_id | Invoke-SqlQuery
     ) {
         Write-Host "Found existing game"
@@ -724,6 +725,32 @@ function Invoke-RequestProcessing {
                 $circle = Export-SqlData -Data ([PSCustomObject]$playerCircle) -SqlTable Player -OutputColumns Label, Key
                 $message = 'You created a circle labeled `{0}` with key `{1}`.' -f $circle.Label, $circle.Key
                 Send-Response -Message $message
+
+                $result = "select count(1) as circleCount from player where game = $($existingGame.Id)" | Invoke-SqlQuery
+                if ($result.circleCount -gt (2 * $existingGame.LastReport) -and
+                (Get-Date).AddMinutes(-1) -gt $existingGame.LastReportTime) {
+                    $timeId = Get-Random 1000
+                    $time = Get-Date -Millisecond $timeId -Format 'yyyy-MM-dd HH:mm:ss.ffff'
+                    "Update Game set LastReportTime = '$time' where Id = $($existingGame.Id)" | Invoke-SqlQuery
+                    Start-Sleep 10
+                    if ($existingGame = "Select top 1 * from game where
+                        guildId = '{0}'
+                        and EndTime > (SYSDATETIME())
+                        order by EndTime desc
+                        " -f $body.guild_id | Invoke-SqlQuery
+                    ) {
+                        if (($existingGame.LastReportTime -as [datetime]).Millisecond -eq $timeId) {
+                            "Update game set LastReport = $($result.circleCount) where Id = $($existingGame.Id)" | Invoke-SqlQuery
+                            $webhookMessage_params = @{
+                                Message  = "There are now {0} circles!" -f $result.circleCount
+                                Username = "Game Maker"
+                                Uri      = $existingGame.StatusWebhook
+                            }
+                            Send-WebhookMessage @webhookMessage_params
+                        }
+                    }
+
+                }
                 return
             }
         }

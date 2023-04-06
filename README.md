@@ -22,6 +22,7 @@ A Discord Circle of Trust bot
 * [x] Prevent you from betraying a circle after joining it
 * [x] Create a research tool
 * [x] Circle overtaking another circle
+* [x] Circle milestones (everytime it doubles, starting at 5)
 
 ## Accepted/to-do
 **REDACTED**
