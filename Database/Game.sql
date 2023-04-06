@@ -1,12 +1,13 @@
 CREATE TABLE [dbo].[Game]
 (
-  [Id] INT NOT NULL PRIMARY KEY IDENTITY,
-  [StartTime] DATETIME2 DEFAULT (sysdatetime()),
-  [EndTime] DATETIME2,
-  [GuildId] VARCHAR(50),
+  [Id] INT NOT NULL PRIMARY KEY IDENTITY(10000,1),
+  [Ruid] VARCHAR(50) NULL,
+  [StartTime] DATETIME2 DEFAULT (sysdatetime()) NULL,
+  [EndTime] DATETIME2 NULL,
+  [GuildId] VARCHAR(50) NULL,
   [LastReport] INT DEFAULT 0 NULL,
-  [LastReportTime] DATETIME2,
-  [InitiatorId] VARCHAR(50),
-  [StatusWebhook] VARCHAR(MAX),
+  [LastReportTime] DATETIME2 NULL,
+  [InitiatorId] VARCHAR(50) NULL,
+  [StatusWebhook] VARCHAR(MAX) NULL,
 )
 

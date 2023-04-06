@@ -23,6 +23,7 @@ A Discord Circle of Trust bot
 * [x] Create a research tool
 * [x] Circle overtaking another circle
 * [x] Circle milestones (everytime it doubles, starting at 5)
+* [X] Use unique ID for lookup of games on Leaderboard
 
 ## Accepted/to-do
 **REDACTED**

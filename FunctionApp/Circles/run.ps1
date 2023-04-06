@@ -12,8 +12,8 @@ try {
 catch { $top = 10 }
 
 
-if ($guild = $request.query.guild) { $gameFilter = "guildId = @guild" }
-elseif ($gameId = $request.query.game) { $gameFilter = "Id = @gameId" }
+if ($guild = $request.query.guild) { $gameFilter = "GuildId = @guild" }
+elseif ($ruid = $request.query.ruid) { $gameFilter = "Ruid = @ruid" }
 else {
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
@@ -25,14 +25,14 @@ else {
 $game = "select top 1 * from game WHERE $gameFilter
 order by EndTime desc
 " | Invoke-SqlQuery -SqlParameters @{
-    guild  = $guild
-    gameID = $gameId
+    guild = $guild
+    ruid  = $ruid
 }
 
 if (-not $game) {
     $message = "No games found for guild ``$guild``"
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::NoContent
+            StatusCode = [HttpStatusCode]::NotFound
             Body       = $message
         })
     return
@@ -53,7 +53,7 @@ order by count desc
 }
 
 if ($results) {
-    $results = $results | Select-Object Username, Label, Count, Status, Game
+    $results = $results | Select-Object Username, Label, Count, Status
     if ([datetime]::UtcNow -lt $game.EndTime) {
         $results = $results | Select-Object * -ExcludeProperty Username
     }
@@ -104,7 +104,8 @@ if ($results) {
                 }
                 </style>
 "@
-            $body = $results | ConvertTo-Html -Head $head -PostContent "Note: The Discord Username is displayed if the game is already concluded."
+            $Uri = $Request.Url -as [Uri]
+            $body = $results | ConvertTo-Html -Head $head -PostContent "Note: The Discord Username is displayed if the game is already concluded.<br /><br /><a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?ruid=$($game.Ruid)`">Direct link for this game leaderboard</a>"
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode  = [HttpStatusCode]::OK
                     Body        = $body -join "`n"

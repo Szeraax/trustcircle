@@ -317,7 +317,11 @@ function Invoke-RequestProcessing {
                     $data.StatusWebhook = $webhook
                 }
 
-                $existingGame = Export-SqlData -Data ([PSCustomObject]$data) -SqlTable Game -OutputColumns EndTime, StatusWebhook
+                $existingGame = Export-SqlData -Data ([PSCustomObject]$data) -SqlTable Game -OutputColumns EndTime, StatusWebhook, Id
+                "Update Game SET [Ruid] = '{0}{1}' where Id = '{0}'" -f @(
+                    $existingGame.Id
+                    Get-Random -Maximum 9gb -Minimum 1gb
+                ) | Invoke-SqlQuery
                 $endTime = ([System.DateTimeOffset]$existingGame.EndTime).ToUnixTimeSeconds()
                 $message = "You now have a game running that ends <t:{0}:R> (at <t:{0}>)" -f $endtime
                 Send-Response -Message $message
