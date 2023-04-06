@@ -907,7 +907,10 @@ function Invoke-RequestProcessing {
             | Select-Object -expand Value
 
             if ($target_result = "Select top 1 * from player where game = $($existingGame.Id) and UserId = '$target'" | Invoke-SqlQuery) {
-                $message = "<@$target> has joined $($target_result.JoinCount) circles and betrayed $($target_result.BetrayCount) circles."
+                $message = "<@$target> has joined $($target_result.JoinCount) {0} and betrayed $($target_result.BetrayCount) {1}." -f @(
+                    ($target_result.JoinCount -eq 1 ? "circle" : "circles")
+                    ($target_result.BetrayCount -eq 1 ? "circle" : "circles")
+                )
                 Send-Response -Message $message
                 return
             }
