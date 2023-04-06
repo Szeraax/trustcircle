@@ -774,6 +774,28 @@ function Invoke-RequestProcessing {
                             "Update Player set count = $(1 + $match.count),members = '$($match.members),$($body.member.user.id)'
                         where Id = $($match.Id)" | Invoke-SqlQuery
                             Write-Host "Added $($body.member.user.id) to $($match.Id)"
+                            $overtaken = "Select top 1 * from player where
+                            Game = '$($existingGame.Id)'
+                            and Label != @label
+                            AND count = $($match.count)
+                            AND Status = 'Intact'
+                            " | Invoke-SqlQuery -SqlParameters @{
+                                label = $label
+                            }
+                            if ($overtaken) {
+                                $webhookMessage_params = @{
+                                    Message  = 'The circle `{0}` ({1}) has been overtaken by `{2}` ({3})' -f @(
+                                        $overtaken.Label
+                                        $overtaken.Count
+                                        $match.Label
+                                        1 + $match.count
+                                    )
+                                    Username = "Game Maker"
+                                    Uri      = $existingGame.StatusWebhook
+                                }
+                                Send-WebhookMessage @webhookMessage_params
+
+                            }
                             $actionCount++
                         }
                         catch {

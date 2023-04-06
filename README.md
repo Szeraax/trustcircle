@@ -20,6 +20,8 @@ A Discord Circle of Trust bot
 * [x] Add interaction code paths to FunctionApp/entry/run.ps1 to run the function commands
 * [x] Add queue code path for longer duration commands
 * [x] Prevent you from betraying a circle after joining it
+* [x] Create a research tool
+* [x] Circle overtaking another circle
 
 ## Accepted/to-do
 **REDACTED**
