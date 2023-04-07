@@ -3,13 +3,25 @@ using namespace System.Net
 # Input bindings are passed in via param block.
 param($Request, $TriggerMetadata)
 
+# Query parameters:
+# skip (offset)
+# take (count to return)
+# label (label names to filter on)
+# guild (guild ID to search)
+# ruid (game ID to search)
+
 $Request | ConvertTo-Json -Compress -Depth 10
 
 try {
-    [ValidateRange(1, 10000)]
-    $top = $request.query.top
+    [ValidateRange(0, 10000)]
+    [int]$skip = $request.query.skip
 }
-catch { $top = 10 }
+catch { [int]$skip = 0 }
+try {
+    [ValidateRange(1, 10000)]
+    [int]$take = $request.query.take
+}
+catch { [int]$take = 10 }
 
 
 if ($guild = $request.query.guild) { $gameFilter = "GuildId = @guild" }
@@ -41,22 +53,33 @@ if (-not $game) {
 
 if ($label = $request.query.label) {
     $label = "%$label%"
-    $labelFilter = 'and label like @label'
+    $results = "select * from Player where
+    Game = $($game.Id)
+    and label like @label
+    order by count desc
+    " | Invoke-SqlQuery -SqlParameters @{
+        label = $label
+    }
+    $results = $results | Select-Object Username, Label, Count, Status
 }
-
-$results = "select top $top * from Player where
-Game = $($game.Id)
-$labelFilter
-order by count desc
-" | Invoke-SqlQuery -SqlParameters @{
-    label = $label
+else {
+    $results = "select * from Player where
+    Game = $($game.Id)
+    order by count desc
+    OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
+    " | Invoke-SqlQuery -SqlParameters @{
+        Skip = $skip
+        Take = $take
+    }
+    $script:skip = $skip
+    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
 }
 
 if ($results) {
-    $results = $results | Select-Object Username, Label, Count, Status
     if ([datetime]::UtcNow -lt $game.EndTime) {
         $results = $results | Select-Object * -ExcludeProperty Username
     }
+
 
     switch ($Request.Query.Format) {
         "json" {
@@ -107,11 +130,6 @@ if ($results) {
             $Uri = $Request.Url -as [Uri]
             $body = $results | ConvertTo-Html -Head $head -PostContent "Note: The Discord Username is displayed if the game is already concluded.<br /><br /><a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?ruid=$($game.Ruid)`">Direct link for this game leaderboard</a>"
             if (-not $body) { $body = "No active circles in game" }
-            Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
-                    StatusCode  = [HttpStatusCode]::OK
-                    Body        = $body -join "`n"
-                    ContentType = 'text/html'
-                })
         }
     }
 }
@@ -119,4 +137,9 @@ else {
     $body = "No matching results for guild $guild."
 }
 
+Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
+        StatusCode  = [HttpStatusCode]::OK
+        Body        = $body -join "`n"
+        ContentType = 'text/html'
+    })
 # Associate values to output bindings by calling 'Push-OutputBinding'.

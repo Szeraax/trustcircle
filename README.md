@@ -25,6 +25,7 @@ A Discord Circle of Trust bot
 * [x] Circle milestones (everytime it doubles, starting at 5)
 * [X] Use unique ID for lookup of games on Leaderboard
 * [x] Rate limit circle creation and overtake notifications
+* [x] Scroll leaderboard to specific position (skip and take)
 
 ## Accepted/to-do
 **REDACTED**
