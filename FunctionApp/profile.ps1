@@ -748,10 +748,22 @@ function Invoke-RequestProcessing {
                         if (($existingGame.LastReportTime -as [datetime]).Millisecond -eq $timeId) {
                             "Update game set LastReport = $($result.circleCount) where Id = $($existingGame.Id)" | Invoke-SqlQuery
                             $webhookMessage_params = @{
-                                Message  = "There are now {0} circles!" -f $result.circleCount
-                                Username = "Game Maker"
+                                # Message  = "There are now {0} circles!" -f $result.circleCount
+                                # Username = "Game Maker"
                                 Uri      = $existingGame.StatusWebhook
+                                Envelope = @{
+                                    username = "Game Talker"
+                                    embeds   = @(
+                                        @{
+                                            title       = "Circles Poppin' up"
+                                            url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&skip=0&take=10"
+                                            description = "There are now {0} circles!" -f $result.circleCount
+                                            color       = 0x555555
+                                        }
+                                    )
+                                }
                             }
+
                             Send-WebhookMessage @webhookMessage_params
                         }
                     }
@@ -829,15 +841,25 @@ function Invoke-RequestProcessing {
                                 ) {
                                     if (($existingGame.LastReportTime -as [datetime]).Millisecond -eq $timeId) {
 
+                                        $Message = 'The circle `{0}` ({1}) has been overtaken by `{2}` ({3})' -f @(
+                                            $overtaken.Label
+                                            $overtaken.Count
+                                            $match.Label
+                                            1 + $match.count
+                                        )
                                         $webhookMessage_params = @{
-                                            Message  = 'The circle `{0}` ({1}) has been overtaken by `{2}` ({3})' -f @(
-                                                $overtaken.Label
-                                                $overtaken.Count
-                                                $match.Label
-                                                1 + $match.count
-                                            )
-                                            Username = "Game Maker"
                                             Uri      = $existingGame.StatusWebhook
+                                            Envelope = @{
+                                                username = "Game stalker"
+                                                embeds   = @(
+                                                    @{
+                                                        title       = 'Circle growth'
+                                                        url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&skip=0&take=10"
+                                                        description = $message
+                                                        color       = 0x5555aa
+                                                    }
+                                                )
+                                            }
                                         }
                                         Send-WebhookMessage @webhookMessage_params
                                     }
@@ -942,9 +964,18 @@ function Invoke-RequestProcessing {
                     Set-DiscordRole Treachery
 
                     $webhookMessage_params = @{
-                        Message  = "A circle with label ``$label`` was betrayed!"
-                        Username = "Game Breaker"
                         Uri      = $existingGame.StatusWebhook
+                        Envelope = @{
+                            username = "Game Breaker"
+                            embeds   = @(
+                                @{
+                                    title       = "Red ring of death"
+                                    url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&label=$label"
+                                    description = "A circle with label ``$label`` was betrayed!"
+                                    color       = 0xff0000
+                                }
+                            )
+                        }
                     }
                     Send-WebhookMessage @webhookMessage_params
                 }

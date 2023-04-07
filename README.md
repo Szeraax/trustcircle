@@ -27,6 +27,7 @@ A Discord Circle of Trust bot
 * [x] Rate limit circle creation and overtake notifications
 * [x] Scroll leaderboard to specific position (skip and take)
 * [x] Add role for users indicating recent trust actions
+* [x] Status announcements embed link to the leaderboard
 
 ## Accepted/to-do
 **REDACTED**
