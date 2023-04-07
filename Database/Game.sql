@@ -5,7 +5,7 @@ CREATE TABLE [dbo].[Game]
   [StartTime] DATETIME2 DEFAULT (sysdatetime()) NULL,
   [EndTime] DATETIME2 NULL,
   [GuildId] VARCHAR(50) NULL,
-  [LastReport] INT DEFAULT 0 NULL,
+  [LastReport] INT DEFAULT 1 NULL,
   [LastReportTime] DATETIME2 NULL,
   [InitiatorId] VARCHAR(50) NULL,
   [StatusWebhook] VARCHAR(MAX) NULL,

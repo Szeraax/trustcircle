@@ -852,6 +852,8 @@ function Invoke-RequestProcessing {
                     }
                 }
                 if ($actionCount -eq 1) {
+                    Set-DiscordRole Friendship
+
                     $message = "You have joined the circle with label ``$label`` and key ``$key`` (it now has $(1 + $match.count) members)."
                     Send-Response -Message $message
                     return
@@ -862,6 +864,8 @@ function Invoke-RequestProcessing {
                     return
                 }
                 elseif ($actionCount -gt 1) {
+                    Set-DiscordRole Friendship
+
                     $message = "You joined $actionCount circles with label ``$label`` and key ``$key``"
                     Send-Response -Message $message
                     return
@@ -935,6 +939,8 @@ function Invoke-RequestProcessing {
                     }
                 }
                 if ($actionCount) {
+                    Set-DiscordRole Treachery
+
                     $webhookMessage_params = @{
                         Message  = "A circle with label ``$label`` was betrayed!"
                         Username = "Game Breaker"
@@ -993,6 +999,33 @@ function Invoke-RequestProcessing {
     }
 }
 
+function Set-DiscordRole {
+    param(
+        $RoleName
+    )
+    $token = [Environment]::GetEnvironmentVariable("APP_DISCORD_BOT_TOKEN_$($body.application_id)")
+
+    $headers = @{
+        Authorization = "Bot $token"
+    }
+    $irm_splat = @{
+        MaximumRetryCount = 1
+        RetryIntervalSec  = 1
+        ContentType       = 'application/json'
+        UserAgent         = 'DiscordBot (https://dcrich.net,0.0.1)'
+        Headers           = $headers
+        ErrorAction       = 'Stop'
+    }
+
+    $irm_splat.Uri = "https://discord.com/api/guilds/$($body.Guild_ID)/roles"
+    $roles = Invoke-RestMethod @irm_splat
+    $role = $roles | Where-Object { $_.name -eq $RoleName } | Select-Object -First 1
+    $irm_splat.Uri = "https://discord.com/api/guilds/$($body.Guild_ID)/members/$($body.member.user.id)/roles/$($role.id)"
+    try {
+        Invoke-RestMethod @irm_splat -Method Put
+    }
+    catch {}
+}
 # This code scrubs DBNulls.  Props to Dave Wyatt and fffnite
 # Open a MR for this updated code to go into Invoke-SqlCmd2 module.
 $cSharp = @'

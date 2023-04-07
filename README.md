@@ -26,6 +26,7 @@ A Discord Circle of Trust bot
 * [X] Use unique ID for lookup of games on Leaderboard
 * [x] Rate limit circle creation and overtake notifications
 * [x] Scroll leaderboard to specific position (skip and take)
+* [x] Add role for users indicating recent trust actions
 
 ## Accepted/to-do
 **REDACTED**
