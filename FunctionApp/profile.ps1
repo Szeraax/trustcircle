@@ -183,7 +183,7 @@ function Set-SqlRow {
 
     end {
         $Query = "UPDATE $SqlTable SET {0} WHERE $KeyField = '$KeyValue'" -f (($Data.GetEnumerator() | ForEach-Object { "$($_.Key) = $($_.Value)" }) -join ",")
-        Invoke-SettlementSql -Query $Query
+        Invoke-SqlQuery -Query $Query
     }
 }
 
@@ -732,7 +732,7 @@ function Invoke-RequestProcessing {
 
                 $result = "select count(1) as circleCount from player where game = $($existingGame.Id)" | Invoke-SqlQuery
                 if ($result.circleCount -gt (2 * $existingGame.LastReport) -and
-                (Get-Date).AddMinutes(-1) -gt $existingGame.LastReportTime) {
+                (Get-Date).AddMinutes(-5) -gt $existingGame.LastReportTime) {
                     $timeId = Get-Random 1000
                     $time = Get-Date -Millisecond $timeId -Format 'yyyy-MM-dd HH:mm:ss.ffff'
                     "Update Game set LastReportTime = '$time' where Id = $($existingGame.Id)" | Invoke-SqlQuery
@@ -753,7 +753,6 @@ function Invoke-RequestProcessing {
                             Send-WebhookMessage @webhookMessage_params
                         }
                     }
-
                 }
                 return
             }
@@ -813,19 +812,32 @@ function Invoke-RequestProcessing {
                             " | Invoke-SqlQuery -SqlParameters @{
                                 label = $label
                             }
-                            if ($overtaken) {
-                                $webhookMessage_params = @{
-                                    Message  = 'The circle `{0}` ({1}) has been overtaken by `{2}` ({3})' -f @(
-                                        $overtaken.Label
-                                        $overtaken.Count
-                                        $match.Label
-                                        1 + $match.count
-                                    )
-                                    Username = "Game Maker"
-                                    Uri      = $existingGame.StatusWebhook
-                                }
-                                Send-WebhookMessage @webhookMessage_params
+                            if ($overtaken -and (Get-Date).AddMinutes(-5) -gt $existingGame.LastReportTime) {
+                                $timeId = Get-Random 1000
+                                $time = Get-Date -Millisecond $timeId -Format 'yyyy-MM-dd HH:mm:ss.ffff'
+                                "Update Game set LastReportTime = '$time' where Id = $($existingGame.Id)" | Invoke-SqlQuery
+                                Start-Sleep 10
+                                if ($existingGame = "Select top 1 * from game where
+                                        guildId = '{0}'
+                                        and EndTime > (SYSDATETIME())
+                                        order by EndTime desc
+                                        " -f $body.guild_id | Invoke-SqlQuery
+                                ) {
+                                    if (($existingGame.LastReportTime -as [datetime]).Millisecond -eq $timeId) {
 
+                                        $webhookMessage_params = @{
+                                            Message  = 'The circle `{0}` ({1}) has been overtaken by `{2}` ({3})' -f @(
+                                                $overtaken.Label
+                                                $overtaken.Count
+                                                $match.Label
+                                                1 + $match.count
+                                            )
+                                            Username = "Game Maker"
+                                            Uri      = $existingGame.StatusWebhook
+                                        }
+                                        Send-WebhookMessage @webhookMessage_params
+                                    }
+                                }
                             }
                             $actionCount++
                         }

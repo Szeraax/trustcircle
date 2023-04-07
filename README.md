@@ -24,6 +24,7 @@ A Discord Circle of Trust bot
 * [x] Circle overtaking another circle
 * [x] Circle milestones (everytime it doubles, starting at 5)
 * [X] Use unique ID for lookup of games on Leaderboard
+* [x] Rate limit circle creation and overtake notifications
 
 ## Accepted/to-do
 **REDACTED**

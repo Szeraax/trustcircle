@@ -106,6 +106,7 @@ if ($results) {
 "@
             $Uri = $Request.Url -as [Uri]
             $body = $results | ConvertTo-Html -Head $head -PostContent "Note: The Discord Username is displayed if the game is already concluded.<br /><br /><a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?ruid=$($game.Ruid)`">Direct link for this game leaderboard</a>"
+            if (-not $body) { $body = "No active circles in game" }
             Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
                     StatusCode  = [HttpStatusCode]::OK
                     Body        = $body -join "`n"
