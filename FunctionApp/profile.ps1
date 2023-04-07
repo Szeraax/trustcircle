@@ -727,6 +727,8 @@ function Invoke-RequestProcessing {
                 }
 
                 $circle = Export-SqlData -Data ([PSCustomObject]$playerCircle) -SqlTable Player -OutputColumns Label, Key
+                "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
+                ($($existingGame.Id),'$($body.member.user.id)','$($match.UserId)','Create')" | Invoke-SqlQuery
                 $message = 'You created a circle labeled `{0}` with key `{1}`.' -f $circle.Label, $circle.Key
                 Send-Response -Message $message
 
@@ -803,6 +805,8 @@ function Invoke-RequestProcessing {
                         try {
                             "Update Player set count = $(1 + $match.count),members = '$($match.members),$($body.member.user.id)'
                         where Id = $($match.Id)" | Invoke-SqlQuery
+                            "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
+                ($($existingGame.Id),'$($body.member.user.id)','$($match.UserId)','Join')" | Invoke-SqlQuery
                             Write-Host "Added $($body.member.user.id) to $($match.Id)"
                             $overtaken = "Select top 1 * from player where
                             Game = '$($existingGame.Id)'
@@ -919,6 +923,8 @@ function Invoke-RequestProcessing {
                         try {
                             "Update Player set Status = 'Betrayed'
                         where Id = $($match.Id)" | Invoke-SqlQuery
+                            "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
+                ($($existingGame.Id),'$($body.member.user.id)','$($match.UserId)','Betray')" | Invoke-SqlQuery
                             Write-Host "$($body.member.user.id) betrayed $($match.Id)"
                             $actionCount++
                         }
