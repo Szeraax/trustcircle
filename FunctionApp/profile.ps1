@@ -265,6 +265,11 @@ function Invoke-RequestProcessing {
         return
     }
 
+    if (-not [string]::IsNullOrWhiteSpace($Body.guild_id) -and $Body.guild_id -ne $ENV:APP_SERVER_ONLY) {
+        Send-Response -Message "Sorry, the bot is currently disabled. Please try again later."
+        return
+    }
+
     $commandName = @(
         $body.data.name
         $body.data.options | Where-Object type -In 1, 2 | Select-Object -First 1 -expand name
@@ -498,7 +503,7 @@ function Invoke-RequestProcessing {
             AND UserId = '$($body.member.user.id)'
             " | Invoke-SqlQuery
 
-            if ($circle) {
+            if ($circle.Status) {
                 $message = 'You have already created a circle. Its label is `{0}` and has key `{1}` (it currently has {2} {3}).' -f @(
                     $circle.Label
                     $circle.Key
@@ -946,45 +951,59 @@ function Invoke-RequestProcessing {
             if ($matched) {
                 $actionCount = 0
                 foreach ($match in $matched) {
-                    if ('Betrayed' -eq $match.Status) { Write-Host "Already betrayed" }
-                    else {
-                        if ($body.member.user.id -in ($match.members -split ',')) {
-                            Write-Host "Already in"
-                            $message = "You have previously joined this circle and cannot betray it."
-                            if ($actionCount) { $message += " (But you did also betray a circle with label ``$label``)" }
-                            Send-Response -Message $message
-                            return
+                    if ($body.member.user.id -in ($match.members -split ',')) {
+                        Write-Host "Already in"
+                        $message = "You have previously joined this circle and cannot betray it."
+                        if ($actionCount) { $message += " (But you did just betray a circle with label ``$label``)" }
+                        Send-Response -Message $message
+                        return
+                    }
+                    elseif ($body.member.user.id -in ($match.betrayers -split ',')) {
+                        Write-Host "Already betrayed"
+                        $message = "You have previously betrayed this circle and cannot betray it again."
+                        if ($actionCount) { $message += " (But you did just betray a circle with label ``$label``)" }
+                        Send-Response -Message $message
+                        return
+                    }
+
+                    try {
+                        $members = $match.members -split ','
+                        if ($members.count -ge 5) {
+                            $toRemove = [int]($members.count * $ENV:APP_CIRCLE_PROTECTION_PERCENTAGE)
+                            $remaining = $members | Get-Random -Count ($members.count - $toRemove)
+                            "Update Player set count = $($remaining.count), members = '$($remaining -join ',')' where id = $($match.id)" |
+                            Invoke-SqlQuery
                         }
 
-                        try {
-                            "Update Player set Status = 'Betrayed'
-                        where Id = $($match.Id)" | Invoke-SqlQuery
-                            "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
+                        "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
                 ($($existingGame.Id),'$($body.member.user.id)','$($match.UserId)','Betray')" | Invoke-SqlQuery
-                            "Update Player set BetrayCount = BetrayCount + 1 where UserID = '$($body.member.user.id)' and Game = $($existingGame.Id)" |
-                            Invoke-SqlQuery
-                            Write-Host "$($body.member.user.id) betrayed $($match.Id)"
-                            $actionCount++
-                        }
-                        catch {
-                            Send-Response -Message "failed for some reason. Try again?"
-                            return
-                        }
+                        "Update Player set BetrayCount = BetrayCount + 1 where UserID = '$($body.member.user.id)' and Game = $($existingGame.Id)" |
+                        Invoke-SqlQuery
+                        Write-Host "$($body.member.user.id) betrayed $($match.Id)"
+                        $actionCount++
+                    }
+                    catch {
+                        Send-Response -Message "failed for some reason. Try again?"
+                        return
                     }
                 }
                 if ($actionCount) {
                     Set-DiscordRole Treachery
                     Remove-DiscordRole Friendship
 
+                    $desc = "A circle with label ``$label`` was betrayed by <@$($body.member.user.id)>."
+                    if ($toRemove.count) {
+                        $desc += " $($toRemove.count) gave up all to protect the circle!"
+                    }
                     $webhookMessage_params = @{
                         Uri      = $existingGame.StatusWebhook
                         Envelope = @{
-                            username = "Game Breaker"
+                            username = "Game Staker"
                             embeds   = @(
                                 @{
                                     title       = "Red ring of death"
                                     url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&label=$([System.Web.HttpUtility]::UrlEncode($label))"
-                                    description = "A circle with label ``$label`` was betrayed!"
+                                    description = $desc
                                     color       = 0xff0000
                                 }
                             )

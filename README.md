@@ -31,6 +31,8 @@ A Discord Circle of Trust bot
 * [x] Allow you to probe a circle that you are in and see who all the members are
 * [x] Be able to see what circles you've joined/betrayed
 * [x] Disable discord accounts that are less than a week old
+* [x] Announce publicly WHO betrays a circle.
+* [x] Make betrayals only remove a portion of your circle
 
 ## Accepted/to-do
 **REDACTED**
