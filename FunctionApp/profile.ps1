@@ -259,6 +259,12 @@ function Invoke-RequestProcessing {
         $body
     )
 
+    $userCreationTime = Get-Date -UnixTimeSeconds ((($body.member.user.id -shr 22) + 1420070400000) / 1000)
+    if (1 -eq $ENV:APP_DISABLE_ALTS -and $userCreationTime -gt (Get-Date).AddDays(-7)) {
+        Send-Response -Message "Sorry, alts are currently disabled."
+        return
+    }
+
     $commandName = @(
         $body.data.name
         $body.data.options | Where-Object type -In 1, 2 | Select-Object -First 1 -expand name
