@@ -6,6 +6,7 @@ CREATE TABLE [dbo].[Player] (
     [Label]   VARCHAR (50)  NULL,
     [Count]   INT  NULL,
     [Members]   VARCHAR(MAX)  NULL,
+    [Betrayers]   VARCHAR(MAX)  NULL,
     [Key]    VARCHAR (300) NULL,
     [Status] VARCHAR (50)  CONSTRAINT [DEFAULT_Player_Status] DEFAULT 'Intact' NULL,
     [JoinCount]   INT DEFAULT 1 NULL,

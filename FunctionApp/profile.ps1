@@ -1038,6 +1038,66 @@ function Invoke-RequestProcessing {
                 return
             }
         }
+
+        "qwestion" {
+            if ($existingGame = "Select top 1 * from game where
+            guildId = '{0}'
+            order by EndTime desc
+            " -f $body.guild_id | Invoke-SqlQuery
+            ) {
+                Write-Host "Found existing game"
+            }
+            if (-not $existingGame) {
+                Send-Response -Message "No games found for your server. Start a game first!"
+                return
+            }
+
+            $target = $body.Data.options
+            | Where-Object name -EQ "target"
+            | Select-Object -expand Value
+
+            $circles = "Select * from player where Label = '$target'
+            and game = $($existingGame.Id)
+            and members like '%$($body.member.user.id)%'" | Invoke-SqlQuery
+            $embeds = @()
+
+            foreach ($circle in $circles) {
+                $members = $circle.members -split "," | Where-Object { $_ }
+                $betrayers = $circle.betrayers -split "," | Where-Object { $_ }
+
+                $title = "{0} ({1}/{2})" -f @(
+                    $circle.Label
+                    $members.count
+                    $betrayers.count
+                )
+                $desc = "Members: {0}" -f (($members | Sort-Object | ForEach-Object { "<@$_>" }) -join ' ')
+                if ($betrayers) {
+                    $desc += "`nBetrayers: {0}" -f (($betrayers | Sort-Object | ForEach-Object { "<@$_>" }) -join ' ')
+                }
+                $hashOutput = Get-FileHash -InputStream ([System.IO.MemoryStream]::New([System.Text.Encoding]::UTF8.GetBytes($circle.Label))) -Algorithm MD5
+                $color = ($hashOutput.Hash.Tolower().ToCharArray() | Select-Object -First 6) -join ''
+                $embed = @{
+                    title       = $title
+                    # url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&skip=0&take=10"
+                    description = $desc
+                    color       = [Convert]::ToInt64($color, 16)
+                }
+                $embed | Write-Host
+                $embeds += $embed
+            }
+
+            if ($embeds) {
+                $message = "Found the following:"
+                Send-Response -response (@{
+                        type    = 4
+                        content = $message
+                        embeds  = $embeds
+                    } | ConvertTo-Json)
+            }
+            else {
+                Send-Response -Message "You are not in any circles labeled '$target'"
+            }
+        }
     }
 }
 
