@@ -265,7 +265,7 @@ function Invoke-RequestProcessing {
         return
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($Body.guild_id) -and $Body.guild_id -ne $ENV:APP_SERVER_ONLY) {
+    if (-not [string]::IsNullOrWhiteSpace($ENV:APP_SERVER_ONLY) -and $Body.guild_id -ne $ENV:APP_SERVER_ONLY) {
         Send-Response -Message "Sorry, the bot is currently disabled. Please try again later."
         return
     }
@@ -971,12 +971,14 @@ function Invoke-RequestProcessing {
                         if ($members.count -ge 5) {
                             $toRemove = [int]($members.count * $ENV:APP_CIRCLE_PROTECTION_PERCENTAGE)
                             $remaining = $members | Get-Random -Count ($members.count - $toRemove)
+                            "membercount: {0} - PROTECTION: $ENV:APP_CIRCLE_PROTECTION_PERCENTAGE - toRemove:{1} - remaining: {2} ($($members.count - $toRemove))" -f $members.count, $toRemove, $remaining.count | Write-Warning
                             "Update Player set count = $($remaining.count), members = '$($remaining -join ',')' where id = $($match.id)" |
                             Invoke-SqlQuery
                         }
 
                         "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
                 ($($existingGame.Id),'$($body.member.user.id)','$($match.UserId)','Betray')" | Invoke-SqlQuery
+                        "Update player set Betrayers = '$($match.betrayers),$($body.member.user.id)' where id = $($match.id)" | Invoke-SqlQuery
                         "Update Player set BetrayCount = BetrayCount + 1 where UserID = '$($body.member.user.id)' and Game = $($existingGame.Id)" |
                         Invoke-SqlQuery
                         Write-Host "$($body.member.user.id) betrayed $($match.Id)"
@@ -992,8 +994,8 @@ function Invoke-RequestProcessing {
                     Remove-DiscordRole Friendship
 
                     $desc = "A circle with label ``$label`` was betrayed by <@$($body.member.user.id)>."
-                    if ($toRemove.count) {
-                        $desc += " $($toRemove.count) gave up all to protect the circle!"
+                    if ($toRemove) {
+                        $desc += " $($toRemove) gave up all to protect the circle!"
                     }
                     $webhookMessage_params = @{
                         Uri      = $existingGame.StatusWebhook
@@ -1076,7 +1078,7 @@ function Invoke-RequestProcessing {
                         $embed = @{
                             title       = 'Betrayed circles'
                             # url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&skip=0&take=10"
-                            description = ($memberCircles.Label | ForEach-Object { "``$_``" }) -join "`n"
+                            description = ($betrayedCircles.Label | ForEach-Object { "``$_``" }) -join "`n"
                             color       = 0xff2211
                         }
                         if ($ENV:ENV_DEBUG) { $embed }
