@@ -817,6 +817,8 @@ function Invoke-RequestProcessing {
                         try {
                             "Update Player set count = $(1 + $match.count),members = '$($match.members),$($body.member.user.id)'
                         where Id = $($match.Id)" | Invoke-SqlQuery
+                            "Update Player set JoinCount = JoinCount + 1 where UserID = '$($body.member.user.id)' and Game = $($existingGame.Id)" |
+                            Invoke-SqlQuery
                             "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
                 ($($existingGame.Id),'$($body.member.user.id)','$($match.UserId)','Join')" | Invoke-SqlQuery
                             Write-Host "Added $($body.member.user.id) to $($match.Id)"
@@ -850,7 +852,7 @@ function Invoke-RequestProcessing {
                                         $webhookMessage_params = @{
                                             Uri      = $existingGame.StatusWebhook
                                             Envelope = @{
-                                                username = "Game stalker"
+                                                username = "Game Stalker"
                                                 embeds   = @(
                                                     @{
                                                         title       = 'Circle growth'
@@ -875,6 +877,7 @@ function Invoke-RequestProcessing {
                 }
                 if ($actionCount -eq 1) {
                     Set-DiscordRole Friendship
+                    Remove-DiscordRole Treachery
 
                     $message = "You have joined the circle with label ``$label`` and key ``$key`` (it now has $(1 + $match.count) members)."
                     Send-Response -Message $message
@@ -887,6 +890,7 @@ function Invoke-RequestProcessing {
                 }
                 elseif ($actionCount -gt 1) {
                     Set-DiscordRole Friendship
+                    Remove-DiscordRole Treachery
 
                     $message = "You joined $actionCount circles with label ``$label`` and key ``$key``"
                     Send-Response -Message $message
@@ -951,6 +955,8 @@ function Invoke-RequestProcessing {
                         where Id = $($match.Id)" | Invoke-SqlQuery
                             "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
                 ($($existingGame.Id),'$($body.member.user.id)','$($match.UserId)','Betray')" | Invoke-SqlQuery
+                            "Update Player set BetrayCount = BetrayCount + 1 where UserID = '$($body.member.user.id)' and Game = $($existingGame.Id)" |
+                            Invoke-SqlQuery
                             Write-Host "$($body.member.user.id) betrayed $($match.Id)"
                             $actionCount++
                         }
@@ -962,6 +968,7 @@ function Invoke-RequestProcessing {
                 }
                 if ($actionCount) {
                     Set-DiscordRole Treachery
+                    Remove-DiscordRole Friendship
 
                     $webhookMessage_params = @{
                         Uri      = $existingGame.StatusWebhook
@@ -970,7 +977,7 @@ function Invoke-RequestProcessing {
                             embeds   = @(
                                 @{
                                     title       = "Red ring of death"
-                                    url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&label=$label"
+                                    url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&label=$([System.Web.HttpUtility]::UrlEncode($label))"
                                     description = "A circle with label ``$label`` was betrayed!"
                                     color       = 0xff0000
                                 }
@@ -1008,6 +1015,10 @@ function Invoke-RequestProcessing {
             " -f $body.guild_id | Invoke-SqlQuery
             ) {
                 Write-Host "Found existing game"
+            }
+            if (-not $existingGame) {
+                Send-Response -Message "No games found for your server. Start a game first!"
+                return
             }
 
             $target = $body.Data.options
@@ -1054,6 +1065,33 @@ function Set-DiscordRole {
     $irm_splat.Uri = "https://discord.com/api/guilds/$($body.Guild_ID)/members/$($body.member.user.id)/roles/$($role.id)"
     try {
         Invoke-RestMethod @irm_splat -Method Put
+    }
+    catch {}
+}
+function Remove-DiscordRole {
+    param(
+        $RoleName
+    )
+    $token = [Environment]::GetEnvironmentVariable("APP_DISCORD_BOT_TOKEN_$($body.application_id)")
+
+    $headers = @{
+        Authorization = "Bot $token"
+    }
+    $irm_splat = @{
+        MaximumRetryCount = 1
+        RetryIntervalSec  = 1
+        ContentType       = 'application/json'
+        UserAgent         = 'DiscordBot (https://dcrich.net,0.0.1)'
+        Headers           = $headers
+        ErrorAction       = 'Stop'
+    }
+
+    $irm_splat.Uri = "https://discord.com/api/guilds/$($body.Guild_ID)/roles"
+    $roles = Invoke-RestMethod @irm_splat
+    $role = $roles | Where-Object { $_.name -eq $RoleName } | Select-Object -First 1
+    $irm_splat.Uri = "https://discord.com/api/guilds/$($body.Guild_ID)/members/$($body.member.user.id)/roles/$($role.id)"
+    try {
+        Invoke-RestMethod @irm_splat -Method Delete
     }
     catch {}
 }
