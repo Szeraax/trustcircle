@@ -29,6 +29,7 @@ A Discord Circle of Trust bot
 * [x] Add role for users indicating recent trust actions
 * [x] Status announcements embed link to the leaderboard
 * [x] Allow you to probe a circle that you are in and see who all the members are
+* [x] Be able to see what circles you've joined/betrayed
 
 ## Accepted/to-do
 **REDACTED**

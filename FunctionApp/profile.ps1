@@ -1030,6 +1030,42 @@ function Invoke-RequestProcessing {
                     ($target_result.JoinCount -eq 1 ? "circle" : "circles")
                     ($target_result.BetrayCount -eq 1 ? "circle" : "circles")
                 )
+
+                if ($body.member.user.id -eq $target) {
+                    $embeds = @()
+                    $circles = "Select * from player where
+                    (members like '%$($body.member.user.id)%' OR betrayers like '%$($body.member.user.id)%')
+                    AND game = $($existingGame.Id)
+                    " | Invoke-SqlQuery
+
+                    $memberCircles, $betrayedCircles = @($circles).Where({ $_.members -match $body.member.user.id }, "Split")
+                    $embed = @{
+                        title       = 'Joined circles'
+                        # url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&skip=0&take=10"
+                        description = ($memberCircles.Label | ForEach-Object { "``$_``" }) -join "`n"
+                        color       = 0x1155bb
+                    }
+                    if ($ENV:ENV_DEBUG) { $embed }
+                    $embeds += $embed
+                    if ($betrayedCircles) {
+                        $embed = @{
+                            title       = 'Betrayed circles'
+                            # url         = "https://trustcircle.azurewebsites.net/api/circles?guild=$($body.guild_id)&skip=0&take=10"
+                            description = ($memberCircles.Label | ForEach-Object { "``$_``" }) -join "`n"
+                            color       = 0xff2211
+                        }
+                        if ($ENV:ENV_DEBUG) { $embed }
+                        $embeds += $embed
+                    }
+
+                    Send-Response -response (@{
+                            type    = 4
+                            content = $message
+                            embeds  = $embeds
+                        } | ConvertTo-Json)
+                    return
+                }
+
                 Send-Response -Message $message
                 return
             }
