@@ -33,6 +33,7 @@ A Discord Circle of Trust bot
 * [x] Disable discord accounts that are less than a week old
 * [x] Announce publicly WHO betrays a circle.
 * [x] Make betrayals only remove a portion of your circle
+* [x] Re-enable real betray mode (betray kills your circle)
 
 ## Accepted/to-do
 **REDACTED**

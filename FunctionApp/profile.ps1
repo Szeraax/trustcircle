@@ -951,34 +951,21 @@ function Invoke-RequestProcessing {
             if ($matched) {
                 $actionCount = 0
                 foreach ($match in $matched) {
-                    if ($body.member.user.id -in ($match.members -split ',')) {
-                        Write-Host "Already in"
-                        $message = "You have previously joined this circle and cannot betray it."
-                        if ($actionCount) { $message += " (But you did just betray a circle with label ``$label``)" }
-                        Send-Response -Message $message
-                        return
-                    }
-                    elseif ($body.member.user.id -in ($match.betrayers -split ',')) {
-                        Write-Host "Already betrayed"
-                        $message = "You have previously betrayed this circle and cannot betray it again."
-                        if ($actionCount) { $message += " (But you did just betray a circle with label ``$label``)" }
-                        Send-Response -Message $message
-                        return
+                    if ('Betrayed' -eq $match.Status) { Write-Host "Already betrayed" }
+                    else {
+                        if ($body.member.user.id -in ($match.members -split ',')) {
+                            Write-Host "Already in"
+                            $message = "You have previously joined this circle and cannot betray it."
+                            if ($actionCount) { $message += " (But you did also betray a circle with label ``$label``)" }
+                            Send-Response -Message $message
+                            return
+                        }
                     }
 
                     try {
-                        $members = $match.members -split ','
-                        if ($members.count -ge 5) {
-                            $toRemove = [int]($members.count * $ENV:APP_CIRCLE_PROTECTION_PERCENTAGE)
-                            $remaining = $members | Get-Random -Count ($members.count - $toRemove)
-                            "membercount: {0} - PROTECTION: $ENV:APP_CIRCLE_PROTECTION_PERCENTAGE - toRemove:{1} - remaining: {2} ($($members.count - $toRemove))" -f $members.count, $toRemove, $remaining.count | Write-Warning
-                            "Update Player set count = $($remaining.count), members = '$($remaining -join ',')' where id = $($match.id)" |
-                            Invoke-SqlQuery
-                        }
-
                         "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
                 ($($existingGame.Id),'$($body.member.user.id)','$($match.UserId)','Betray')" | Invoke-SqlQuery
-                        "Update player set Betrayers = '$($match.betrayers),$($body.member.user.id)' where id = $($match.id)" | Invoke-SqlQuery
+                        "Update player set Betrayers = '$($body.member.user.id)' where id = $($match.id)" | Invoke-SqlQuery
                         "Update Player set BetrayCount = BetrayCount + 1 where UserID = '$($body.member.user.id)' and Game = $($existingGame.Id)" |
                         Invoke-SqlQuery
                         Write-Host "$($body.member.user.id) betrayed $($match.Id)"
@@ -994,13 +981,10 @@ function Invoke-RequestProcessing {
                     Remove-DiscordRole Friendship
 
                     $desc = "A circle with label ``$label`` was betrayed by <@$($body.member.user.id)>."
-                    if ($toRemove) {
-                        $desc += " $($toRemove) gave up all to protect the circle!"
-                    }
                     $webhookMessage_params = @{
                         Uri      = $existingGame.StatusWebhook
                         Envelope = @{
-                            username = "Game Staker"
+                            username = "Game Caker"
                             embeds   = @(
                                 @{
                                     title       = "Red ring of death"
