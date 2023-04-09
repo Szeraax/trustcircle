@@ -1006,7 +1006,10 @@ function Invoke-RequestProcessing {
             if ($matched) {
                 $actionCount = 0
                 foreach ($match in $matched) {
-                    if ('Betrayed' -eq $match.Status) { Write-Host "Already betrayed" }
+                    if ('Betrayed' -eq $match.Status) {
+                        Write-Host "Already betrayed"
+                        continue
+                    }
                     else {
                         if ($body.member.user.id -in ($match.members -split ',')) {
                             Write-Host "Already in"
@@ -1058,7 +1061,7 @@ function Invoke-RequestProcessing {
                     return
                 }
                 elseif ($actionCount -eq 0) {
-                    $message = "You have already betrayed the circle with label ``$label`` and key ``$key`` (it had $($match.count) {0})." -f ($match.Count -gt 1 ? "members":"member")
+                    $message = "The circle with label ``$label`` and key ``$key`` has already been betrayed (it had $($match.count) {0})." -f ($match.Count -gt 1 ? "members":"member")
                     Send-Response -Message $message
                     return
                 }
