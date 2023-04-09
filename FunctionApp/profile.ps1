@@ -719,7 +719,7 @@ function Invoke-RequestProcessing {
 
                 # Kick back existing players who don't have a new label and aren't specifying one
                 if ([string]::IsNullOrWhiteSpace($circle.label) -and [string]::IsNullOrWhiteSpace($label)) {
-                    $message = "Your circle has been cleansed and must be created anew. Run the `/create circle` command again and specify a label name (and optionally a key) for your new circle."
+                    $message = 'Your circle has been cleansed and must be created anew. Run the `/create circle` command again and specify a label name (and optionally a key) for your new circle.'
                     Send-Response -Message $message
                     return
                 }
@@ -727,7 +727,7 @@ function Invoke-RequestProcessing {
                 # If they don't have a currently have label on their player entry and provide one at runtime, lets make them a new circle on their existing player!
                 elseif ([string]::IsNullOrWhiteSpace($circle.label) -and -not [string]::IsNullOrWhiteSpace($label)) {
                     if ([string]::IsNullOrWhiteSpace($key)) { $key = Get-Random }
-                    "UPDATE Player set Label = '$label',Key = '$key',Members = '$($body.member.user.id)',betrayers = '',Count = 1 WHERE id = $($circle.Id)" | Invoke-SqlQuery
+                    "UPDATE Player set Label = '$label',[Key] = '$key',Members = '$($body.member.user.id)',betrayers = '',Count = 1 WHERE id = $($circle.Id)" | Invoke-SqlQuery
                     "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
                 ($($existingGame.Id),'$($body.member.user.id)','','Create')" | Invoke-SqlQuery
 
@@ -740,10 +740,13 @@ function Invoke-RequestProcessing {
                 elseif (-not [string]::IsNullOrWhiteSpace($key)) {
                     $message = 'Your circle key for circle `{0}` has been updated to `{1}` (it currently has {2} {3}).' -f @(
                         $circle.Label
-                        $circle.Key
+                        $Key
                         $circle.Count
                         $circle.Count -gt 1 ? "members":"member"
                     )
+                    "UPDATE Player set [Key] = '$key' WHERE id = $($circle.Id)" | Invoke-SqlQuery
+                    "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
+                    ($($existingGame.Id),'$($body.member.user.id)','','Update to $key')" | Invoke-SqlQuery
                     Send-Response -Message $message
                     return
                 }
@@ -789,7 +792,7 @@ function Invoke-RequestProcessing {
                 $message = 'You created a circle labeled `{0}` with key `{1}`.' -f $circle.Label, $circle.Key
                 Send-Response -Message $message
 
-                $result = "select count(1) as circleCount from player where game = $($existingGame.Id) and Label like '%'" | Invoke-SqlQuery
+                $result = "select count(1) as circleCount from player where game = $($existingGame.Id) and Label like '_%'" | Invoke-SqlQuery
 
                 # Only want 1 notification going out from the db about game updates every 5 minutes. Never 2. That's spammy!
                 if ($result.circleCount -gt (1.25 * $existingGame.LastReport) -and
@@ -1017,7 +1020,7 @@ function Invoke-RequestProcessing {
                     try {
                         "INSERT INTO Action (Game,Player,TargetPlayer,Type) VALUES
                 ($($existingGame.Id),'$($body.member.user.id)','$($match.UserId)','Betray')" | Invoke-SqlQuery
-                        "Update player set Betrayers = '$($body.member.user.id)' where id = $($match.id)" | Invoke-SqlQuery
+                        "Update player set Betrayers = '$($body.member.user.id)',Status='Betrayed' where id = $($match.id)" | Invoke-SqlQuery
                         "Update Player set BetrayCount = BetrayCount + 1 where UserID = '$($body.member.user.id)' and Game = $($existingGame.Id)" |
                         Invoke-SqlQuery
                         Write-Host "$($body.member.user.id) betrayed $($match.Id)"
@@ -1036,7 +1039,7 @@ function Invoke-RequestProcessing {
                     $webhookMessage_params = @{
                         Uri      = $existingGame.StatusWebhook
                         Envelope = @{
-                            username = "Game Caker"
+                            username = "Game Taker"
                             embeds   = @(
                                 @{
                                     title       = "Red ring of death"

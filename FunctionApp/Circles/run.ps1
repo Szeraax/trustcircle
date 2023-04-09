@@ -24,8 +24,14 @@ try {
 catch { [int]$take = 10 }
 
 
-if ($guild = $request.query.guild) { $gameFilter = "GuildId = @guild" }
-elseif ($ruid = $request.query.ruid) { $gameFilter = "Ruid = @ruid" }
+if ($guild = $request.query.guild) {
+    $gameFilter = "GuildId = @guild"
+    $queryFilter = "Guild=$guild"
+}
+elseif ($ruid = $request.query.ruid) {
+    $gameFilter = "Ruid = @ruid"
+    $queryFilter = "Ruid=$ruid"
+}
 else {
     Push-OutputBinding -Name Response -Value ([HttpResponseContext]@{
             StatusCode = [HttpStatusCode]::BadRequest
@@ -62,6 +68,9 @@ if ($label = $request.query.label) {
         label = $label
     }
     $results = $results | Select-Object Username, Label, Count, Status
+    if ([datetime]::UtcNow -lt $game.EndTime) {
+        $results = $results | Select-Object * -ExcludeProperty Username
+    }
 }
 elseif ($Request.query.TopJoiners -eq 'true') {
     $results = "select * from Player where
@@ -72,7 +81,7 @@ elseif ($Request.query.TopJoiners -eq 'true') {
         Skip = $skip
         Take = $take
     }
-    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
+    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, JoinCount, Status
 }
 elseif ($Request.query.TopBetrayers -eq 'true') {
     $results = "select * from Player where
@@ -83,25 +92,25 @@ elseif ($Request.query.TopBetrayers -eq 'true') {
         Skip = $skip
         Take = $take
     }
-    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
+    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, BetrayCount, Status
 }
 elseif ($Request.query.Betrayers -eq 'true') {
     $results = "
-    select pl.username,count(1) as count from player p
-    join player pl on p.Betrayers = pl.UserId
-    where p.game = $($game.Id)
-    group by pl.username
-    order by count desc
+    select players.username,count(1) as BetrayalsToday from player Betrayers
+    JOIN Player players on Betrayers.Betrayers = players.UserId
+    where players.game = $($game.Id)
+    group by players.username order by BetrayalsToday desc
     OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
     " | Invoke-SqlQuery -SqlParameters @{
         Skip = $skip
         Take = $take
     }
-    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
+    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, BetrayalsToday
 }
 else {
     $results = "select * from Player where
     Game = $($game.Id)
+    and label like '_%'
     order by count desc
     OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
     " | Invoke-SqlQuery -SqlParameters @{
@@ -110,12 +119,13 @@ else {
     }
 
     $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
-}
-
-if ($results) {
     if ([datetime]::UtcNow -lt $game.EndTime) {
         $results = $results | Select-Object * -ExcludeProperty Username
     }
+}
+
+if ($results) {
+
 
     if ($request.query.Status) {
         $results = $results | Where-Object Status -EQ $request.query.Status
@@ -172,10 +182,10 @@ if ($results) {
             $body = $results | ConvertTo-Html -Head $head -PostContent "Note: The Discord Username is displayed if the game is already concluded.<br /><br /><a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?ruid=$($game.Ruid)`">Direct link for this game leaderboard</a>
             <br /><br />
             Altername views:<br />
-            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?Status=Intact`">Without betrayed circles</a><br />
-            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?Betrayers=true`">Today's Top Betrayers</a><br />
-            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?TopJoiners=true`">Top player joins</a><br />
-            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?TopBetrayers=true`">Top player betrayals</a><br />
+            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?$queryFilter&Status=Intact`">Without betrayed circles</a><br />
+            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?$queryFilter&Betrayers=true`">Today's Top Betrayers</a><br />
+            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?$queryFilter&TopJoiners=true`">Top player joins</a><br />
+            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?$queryFilter&TopBetrayers=true`">Top player betrayals</a><br />
             "
             if (-not $body) { $body = "No active circles in game" }
         }
