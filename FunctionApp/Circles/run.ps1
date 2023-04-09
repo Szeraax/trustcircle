@@ -51,6 +51,7 @@ if (-not $game) {
 }
 
 
+$script:skip = $skip
 if ($label = $request.query.label) {
     $label = "%$label%"
     $results = "select * from Player where
@@ -62,6 +63,42 @@ if ($label = $request.query.label) {
     }
     $results = $results | Select-Object Username, Label, Count, Status
 }
+elseif ($Request.query.TopJoiners -eq 'true') {
+    $results = "select * from Player where
+    Game = $($game.Id)
+    order by JoinCount desc
+    OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
+    " | Invoke-SqlQuery -SqlParameters @{
+        Skip = $skip
+        Take = $take
+    }
+    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
+}
+elseif ($Request.query.TopBetrayers -eq 'true') {
+    $results = "select * from Player where
+    Game = $($game.Id)
+    order by BetrayCount desc
+    OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
+    " | Invoke-SqlQuery -SqlParameters @{
+        Skip = $skip
+        Take = $take
+    }
+    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
+}
+elseif ($Request.query.Betrayers -eq 'true') {
+    $results = "
+    select pl.username,count(1) as count from player p
+    join player pl on p.Betrayers = pl.UserId
+    where p.game = $($game.Id)
+    group by pl.username
+    order by count desc
+    OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
+    " | Invoke-SqlQuery -SqlParameters @{
+        Skip = $skip
+        Take = $take
+    }
+    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
+}
 else {
     $results = "select * from Player where
     Game = $($game.Id)
@@ -71,13 +108,17 @@ else {
         Skip = $skip
         Take = $take
     }
-    $script:skip = $skip
+
     $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
 }
 
 if ($results) {
     if ([datetime]::UtcNow -lt $game.EndTime) {
         $results = $results | Select-Object * -ExcludeProperty Username
+    }
+
+    if ($request.query.Status) {
+        $results = $results | Where-Object Status -EQ $request.query.Status
     }
 
 
@@ -128,7 +169,14 @@ if ($results) {
                 </style>
 "@
             $Uri = $Request.Url -as [Uri]
-            $body = $results | ConvertTo-Html -Head $head -PostContent "Note: The Discord Username is displayed if the game is already concluded.<br /><br /><a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?ruid=$($game.Ruid)`">Direct link for this game leaderboard</a>"
+            $body = $results | ConvertTo-Html -Head $head -PostContent "Note: The Discord Username is displayed if the game is already concluded.<br /><br /><a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?ruid=$($game.Ruid)`">Direct link for this game leaderboard</a>
+            <br /><br />
+            Altername views:<br />
+            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?Status=Intact`">Without betrayed circles</a><br />
+            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?Betrayers=true`">Today's Top Betrayers</a><br />
+            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?TopJoiners=true`">Top player joins</a><br />
+            <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?TopBetrayers=true`">Top player betrayals</a><br />
+            "
             if (-not $body) { $body = "No active circles in game" }
         }
     }

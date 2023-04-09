@@ -36,6 +36,7 @@ A Discord Circle of Trust bot
 * [x] Re-enable real betray mode (betray kills your circle)
 * [x] You can create a circle if no label currently
 * [x] You can change key at will
+* [x] Leaderboard changes (Intact, joiners, betrayers)
 
 ## Accepted/to-do
 **REDACTED**
