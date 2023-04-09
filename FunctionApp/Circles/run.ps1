@@ -68,9 +68,6 @@ if ($label = $request.query.label) {
         label = $label
     }
     $results = $results | Select-Object Username, Label, Count, Status
-    if ([datetime]::UtcNow -lt $game.EndTime) {
-        $results = $results | Select-Object * -ExcludeProperty Username
-    }
 }
 elseif ($Request.query.TopJoiners -eq 'true') {
     $results = "select * from Player where
@@ -119,9 +116,6 @@ else {
     }
 
     $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
-    if ([datetime]::UtcNow -lt $game.EndTime) {
-        $results = $results | Select-Object * -ExcludeProperty Username
-    }
 }
 
 if ($results) {
@@ -179,7 +173,7 @@ if ($results) {
                 </style>
 "@
             $Uri = $Request.Url -as [Uri]
-            $body = $results | ConvertTo-Html -Head $head -PostContent "Note: The Discord Username is displayed if the game is already concluded.<br /><br /><a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?ruid=$($game.Ruid)`">Direct link for this game leaderboard</a>
+            $body = $results | ConvertTo-Html -Head $head -PostContent "<a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?ruid=$($game.Ruid)`">Direct link for this game leaderboard</a>
             <br /><br />
             Altername views:<br />
             <a href=`"https://$($Request.Headers.host)$($Uri.AbsolutePath)?$queryFilter&Status=Intact`">Without betrayed circles</a><br />
