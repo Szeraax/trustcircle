@@ -34,6 +34,8 @@ A Discord Circle of Trust bot
 * [x] Announce publicly WHO betrays a circle.
 * [x] Make betrayals only remove a portion of your circle
 * [x] Re-enable real betray mode (betray kills your circle)
+* [x] You can create a circle if no label currently
+* [x] You can change key at will
 
 ## Accepted/to-do
 **REDACTED**
