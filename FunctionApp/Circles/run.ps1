@@ -56,6 +56,10 @@ if (-not $game) {
     return
 }
 
+$queryBuilder = ""
+if ($request.query.Status) {
+    $queryBuilder += " AND Status = @status "
+}
 
 $script:skip = $skip
 if ($label = $request.query.label) {
@@ -63,31 +67,37 @@ if ($label = $request.query.label) {
     $results = "select * from Player where
     Game = $($game.Id)
     and label like @label
+    $queryBuilder
     order by count desc
     " | Invoke-SqlQuery -SqlParameters @{
-        label = $label
+        label  = $label
+        Status = $request.query.Status
     }
     $results = $results | Select-Object Username, Label, Count, Status
 }
 elseif ($Request.query.TopJoiners -eq 'true') {
     $results = "select * from Player where
     Game = $($game.Id)
+    $queryBuilder
     order by JoinCount desc
     OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
     " | Invoke-SqlQuery -SqlParameters @{
-        Skip = $skip
-        Take = $take
+        Skip   = $skip
+        Take   = $take
+        Status = $request.query.Status
     }
     $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, JoinCount, Status
 }
 elseif ($Request.query.TopBetrayers -eq 'true') {
     $results = "select * from Player where
     Game = $($game.Id)
+    $queryBuilder
     order by BetrayCount desc
     OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
     " | Invoke-SqlQuery -SqlParameters @{
-        Skip = $skip
-        Take = $take
+        Skip   = $skip
+        Take   = $take
+        Status = $request.query.Status
     }
     $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, BetrayCount, Status
 }
@@ -108,22 +118,19 @@ else {
     $results = "select * from Player where
     Game = $($game.Id)
     and label like '_%'
+    $queryBuilder
     order by count desc
     OFFSET @Skip ROWS FETCH NEXT @Take ROWS ONLY
     " | Invoke-SqlQuery -SqlParameters @{
-        Skip = $skip
-        Take = $take
+        Skip   = $skip
+        Take   = $take
+        Status = $request.query.Status
     }
 
-    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Count, Status
+    $results = $results | Select-Object @{n = 'Ranking'; e = { $script:skip++; $script:skip } }, Username, Label, Key, Count, Status
 }
 
 if ($results) {
-
-
-    if ($request.query.Status) {
-        $results = $results | Where-Object Status -EQ $request.query.Status
-    }
 
 
     switch ($Request.Query.Format) {
