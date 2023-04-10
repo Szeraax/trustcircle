@@ -1,0 +1,277 @@
+[
+    {
+        "name_localizations": null,
+        "description": "Commands for circles",
+        "description_localizations": null,
+        "application_id": "1092310128952356874",
+        "dm_permission": true,
+        "options": [
+            {
+                "description_localizations": null,
+                "name_localizations": null,
+                "description": "Create a circle",
+                "options": [
+                    {
+                        "type": 3,
+                        "name": "label",
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "The name of the circle"
+                    },
+                    {
+                        "type": 3,
+                        "name": "key",
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "The key for the circle"
+                    }
+                ],
+                "type": 1,
+                "name": "circle"
+            }
+        ],
+        "default_member_permissions": null,
+        "nsfw": false,
+        "type": 1,
+        "name": "create"
+    },
+    {
+        "name_localizations": null,
+        "description": "Commands for circles",
+        "description_localizations": null,
+        "application_id": "1092310128952356874",
+        "dm_permission": true,
+        "options": [
+            {
+                "description_localizations": null,
+                "name_localizations": null,
+                "description": "Join a circle",
+                "options": [
+                    {
+                        "required": true,
+                        "type": 3,
+                        "name": "label",
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "The name of the circle"
+                    },
+                    {
+                        "required": true,
+                        "type": 3,
+                        "name": "key",
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "The key for the circle"
+                    }
+                ],
+                "type": 1,
+                "name": "circle"
+            }
+        ],
+        "default_member_permissions": null,
+        "nsfw": false,
+        "type": 1,
+        "name": "join"
+    },
+    {
+        "name_localizations": null,
+        "description": "Commands for circles",
+        "description_localizations": null,
+        "application_id": "1092310128952356874",
+        "dm_permission": true,
+        "options": [
+            {
+                "description_localizations": null,
+                "name_localizations": null,
+                "description": "Betray a circle",
+                "options": [
+                    {
+                        "required": true,
+                        "type": 3,
+                        "name": "label",
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "The name of the circle"
+                    },
+                    {
+                        "required": true,
+                        "type": 3,
+                        "name": "key",
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "The key for the circle"
+                    }
+                ],
+                "type": 1,
+                "name": "circle"
+            }
+        ],
+        "default_member_permissions": null,
+        "nsfw": false,
+        "type": 1,
+        "name": "betray"
+    },
+    {
+        "name_localizations": null,
+        "description": "Administrate a Circle of Trust game",
+        "description_localizations": null,
+        "application_id": "1092310128952356874",
+        "dm_permission": true,
+        "options": [
+            {
+                "name": "start",
+                "description_localizations": null,
+                "name_localizations": null,
+                "description": "Start a Circle of Trust game",
+                "options": [
+                    {
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "Start a Circle of Trust game",
+                        "options": [
+                            {
+                                "type": 3,
+                                "name": "webhook",
+                                "description_localizations": null,
+                                "name_localizations": null,
+                                "description": "A discord webhook that can be used to send important game announcements to"
+                            },
+                            {
+                                "type": 3,
+                                "name": "end",
+                                "description_localizations": null,
+                                "name_localizations": null,
+                                "description": "When does the game end (in hours)? Default is 72hours (3 days)"
+                            }
+                        ],
+                        "type": 1,
+                        "name": "game"
+                    }
+                ],
+                "type": 2
+            },
+            {
+                "name": "end",
+                "description_localizations": null,
+                "name_localizations": null,
+                "description": "End a Circle of Trust game",
+                "options": [
+                    {
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "End a Circle of Trust game",
+                        "type": 1,
+                        "name": "game"
+                    }
+                ],
+                "type": 2
+            },
+            {
+                "name": "change",
+                "description_localizations": null,
+                "name_localizations": null,
+                "description": "Change a circle",
+                "options": [
+                    {
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "Change a circle label",
+                        "options": [
+                            {
+                                "required": true,
+                                "type": 3,
+                                "name": "label",
+                                "description_localizations": null,
+                                "name_localizations": null,
+                                "description": "The label of the circle"
+                            },
+                            {
+                                "required": true,
+                                "type": 3,
+                                "name": "new_label",
+                                "description_localizations": null,
+                                "name_localizations": null,
+                                "description": "The new label for the circle"
+                            }
+                        ],
+                        "type": 1,
+                        "name": "circle"
+                    }
+                ],
+                "type": 2
+            },
+            {
+                "name": "delete",
+                "description_localizations": null,
+                "name_localizations": null,
+                "description": "Remove a circle",
+                "options": [
+                    {
+                        "description_localizations": null,
+                        "name_localizations": null,
+                        "description": "Remove a circle",
+                        "options": [
+                            {
+                                "required": true,
+                                "type": 3,
+                                "name": "label",
+                                "description_localizations": null,
+                                "name_localizations": null,
+                                "description": "The label of the circle"
+                            }
+                        ],
+                        "type": 1,
+                        "name": "circle"
+                    }
+                ],
+                "type": 2
+            }
+        ],
+        "default_member_permissions": null,
+        "nsfw": false,
+        "type": 1,
+        "name": "admin"
+    },
+    {
+        "name_localizations": null,
+        "description": "Return a user score",
+        "description_localizations": null,
+        "application_id": "1092310128952356874",
+        "dm_permission": true,
+        "options": [
+            {
+                "name": "target",
+                "description_localizations": null,
+                "name_localizations": null,
+                "description": "The user to check",
+                "type": 6,
+                "required": true
+            }
+        ],
+        "default_member_permissions": null,
+        "nsfw": false,
+        "type": 1,
+        "name": "score"
+    },
+    {
+        "description_localizations": null,
+        "application_id": "1092310128952356874",
+        "dm_permission": true,
+        "options": [
+            {
+                "type": 3,
+                "name": "target",
+                "description_localizations": null,
+                "name_localizations": null,
+                "description": "The circle to check",
+                "required": true
+            }
+        ],
+        "default_member_permissions": null,
+        "nsfw": false,
+        "type": 1,
+        "name": "qwestion",
+        "name_localizations": null,
+        "description": "Return a circle detail"
+    }
+]
