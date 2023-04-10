@@ -13,7 +13,7 @@ function Send-Response {
         $response = (@{
                 type    = 4
                 content = $message
-            } | ConvertTo-Json)
+            } | ConvertTo-Json -EscapeHandling EscapeNonAscii)
     )
     if ($ENV:ENV_DEBUG -eq 1) { "Response: $response" | Write-Host }
     $invokeRestMethod_splat = @{
